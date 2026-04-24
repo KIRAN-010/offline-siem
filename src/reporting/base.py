@@ -18,7 +18,7 @@ class ReportMetadata:
     title: str
     session_id: str
     generated_at: datetime = field(default_factory=datetime.now)
-    generator: str = "Presidency Analysis Engine"
+    generator: str = "Offline SIEM Analysis Engine"
     version: str = "1.0.0"
 
 

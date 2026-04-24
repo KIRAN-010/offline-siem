@@ -28,6 +28,18 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
 
+    # Hide Streamlit Deploy button and toolbar
+    st.markdown(
+        """
+        <style>
+        [data-testid="stToolbar"] button:first-child {visibility: hidden; display: none;}
+        [data-testid="stDecoration"] {visibility: hidden; display: none;}
+        footer {visibility: hidden; display: none;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Render the main UI
     render_main()
 

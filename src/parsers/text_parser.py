@@ -60,7 +60,20 @@ class PlainTextParser(BaseParser):
             if entry:
                 yield entry
 
-    def _parse_line(self, raw_line: str) -> NormalizedLog | None:
+    def parse_line(self, raw_line: str) -> NormalizedLog | None:
+        """Parse a single text log line efficiently.
+
+        Args:
+            raw_line: Single log line to parse.
+
+        Returns:
+            Normalized log entry or None.
+        """
+        line = raw_line.strip()
+        if not line:
+            return None
+
+        return self._parse_line(line)
         """Parse a single text log line."""
         # Try ISO pattern
         match = self.ISO_PATTERN.match(raw_line)

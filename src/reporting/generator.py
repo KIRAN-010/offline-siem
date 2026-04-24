@@ -51,7 +51,7 @@ class ReportGenerator:
         # Create metadata
         session = self.session_mgr.get_session(session_id) if self.session_mgr else {}
         metadata = ReportMetadata(
-            title=f"Presidency Analysis Report - {session.get('name', 'Session')}",
+            title=f"Offline SIEM Analysis Report - {session.get('name', 'Session')}",
             session_id=session_id,
         )
 

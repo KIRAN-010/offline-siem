@@ -34,6 +34,21 @@ class BaseParser(ABC):
         """
         ...
 
+    def parse_line(self, line: str) -> NormalizedLog | None:
+        """Parse a single log line. Default implementation wraps parse().
+
+        Args:
+            line: Single log line to parse.
+
+        Returns:
+            Normalized log entry or None if parsing fails.
+        """
+        try:
+            entries = list(self.parse(line))
+            return entries[0] if entries else None
+        except Exception:
+            return None
+
     def parse_file(self, file_path: Path) -> Iterator[NormalizedLog]:
         """Parse a log file.
 

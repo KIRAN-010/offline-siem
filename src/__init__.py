@@ -1,1 +1,1 @@
-"""Presidency package."""
+"""Offline SIEM package."""

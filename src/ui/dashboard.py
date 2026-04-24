@@ -275,7 +275,7 @@ def render_settings_page():
     st.slider("Items per page", 10, 100, 50)
 
     st.markdown("---")
-    st.caption("Presidency SOC - Offline Security Analysis")
+    st.caption("Offline SIEM - Security Operations Center")
 
 
 def render_upload_section():

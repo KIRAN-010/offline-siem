@@ -1,21 +1,22 @@
-# Presidency SOC - Security Analysis Platform
+# Offline SIEM - Security Operations Center
 
-An offline security analysis and log management system for security operations center (SOC) workflows.
+An advanced offline security information and event management (SIEM) system designed for air-gapped environments and critical infrastructure protection.
 
 ## Features
 
-- **Log Ingestion**: Support for JSON, syslog, plain text, and CSV log formats
-- **Normalization**: All logs converted to a common schema with raw line preservation
-- **Detection Engine**: Rule-based and ML-based threat detection
-  - Brute force attack detection
-  - Failed login tracking
+- **Scalable Log Processing**: Streaming ingestion for large log files (5GB+) with bounded memory usage
+- **Advanced Detection Engine**: Statistical and rule-based threat detection
+  - Brute force attack detection with Z-score anomaly analysis
+  - Failed login tracking with time-window logic
   - Suspicious keyword detection
-  - Threat intelligence matching
-  - Anomaly detection (IsolationForest)
+  - Threat intelligence matching with offline updates
+  - Statistical anomaly detection (Z-score based)
+- **High-Performance Search**: Inverted index for O(1) keyword lookups
 - **Analytics**: Search, filter, group, correlate, and timeline analysis
 - **Incident Management**: Create, track, and resolve security incidents
-- **Reporting**: HTML and TXT reports with SHA-256 integrity verification
-- **Security**: Input validation, password gating, report signing, safe file handling
+- **Offline Threat Intelligence**: Versioned updates with SHA-256 integrity verification
+- **Cryptographic Security**: SHA-256 file integrity, HMAC support, constant-time comparisons
+- **Reporting**: HTML and TXT reports with cryptographic signing
 
 ## Installation
 
@@ -104,7 +105,7 @@ html_path = generator.generate_report(session_id, "html")
 ## Project Structure
 
 ```
-presidency/
+offline-siem/
 ├── app.py                    # Main entry point
 ├── config.yaml               # Configuration
 ├── requirements.txt          # Dependencies

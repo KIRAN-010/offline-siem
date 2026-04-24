@@ -10,7 +10,7 @@ from typing import Any, Iterator
 logger = logging.getLogger(__name__)
 
 # Default database path
-DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "presidency.db"
+DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "offline_siem.db"
 
 
 class Database:
