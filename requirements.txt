@@ -1,0 +1,3 @@
+# Streamlit Presidency App
+streamlit>=1.28.0
+pyyaml>=6.0

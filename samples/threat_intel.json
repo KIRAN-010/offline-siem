@@ -1,0 +1,135 @@
+{
+  "threat_intel": {
+    "description": "Local threat intelligence blocklist",
+    "version": "1.0.0",
+    "updated": "2026-04-24",
+    "sources": ["internal", "osint"]
+  },
+  "suspicious_ips": [
+    {
+      "ip": "185.220.101.1",
+      "type": "exit_node",
+      "category": "tor",
+      "confidence": "high",
+      "first_seen": "2024-01-01",
+      "tags": ["malware", "botnet"]
+    },
+    {
+      "ip": "185.220.101.2",
+      "type": "exit_node",
+      "category": "tor",
+      "confidence": "high",
+      "first_seen": "2024-01-01",
+      "tags": ["malware"]
+    },
+    {
+      "ip": "185.220.101.3",
+      "type": "exit_node",
+      "category": "tor",
+      "confidence": "medium",
+      "first_seen": "2024-02-15",
+      "tags": ["anonymization"]
+    },
+    {
+      "ip": "198.51.100.0",
+      "type": "cidr_block",
+      "category": "reserved",
+      "confidence": "high",
+      "first_seen": "2024-01-01",
+      "tags": ["test", "documentation"]
+    },
+    {
+      "ip": "203.0.113.0",
+      "type": "cidr_block",
+      "category": "reserved",
+      "confidence": "high",
+      "first_seen": "2024-01-01",
+      "tags": ["test", "documentation"]
+    },
+    {
+      "ip": "45.33.32.156",
+      "type": "known_malicious",
+      "category": "botnet",
+      "confidence": "high",
+      "first_seen": "2023-06-01",
+      "tags": ["mirai", "iot"]
+    },
+    {
+      "ip": "104.244.76.13",
+      "type": "exit_node",
+      "category": "tor",
+      "confidence": "high",
+      "first_seen": "2023-08-15",
+      "tags": ["tor", "anonymization"]
+    },
+    {
+      "ip": "91.121.87.10",
+      "type": "known_malicious",
+      "category": "c2",
+      "confidence": "high",
+      "first_seen": "2023-03-20",
+      "tags": ["command_and_control"]
+    }
+  ],
+  "suspicious_keywords": [
+    {
+      "pattern": "sql injection",
+      "severity": "CRITICAL",
+      "category": "sqli"
+    },
+    {
+      "pattern": "xss attack",
+      "severity": "CRITICAL",
+      "category": "xss"
+    },
+    {
+      "pattern": "command injection",
+      "severity": "CRITICAL",
+      "category": "cmdi"
+    },
+    {
+      "pattern": "remote code execution",
+      "severity": "CRITICAL",
+      "category": "rce"
+    },
+    {
+      "pattern": "buffer overflow",
+      "severity": "CRITICAL",
+      "category": "exploit"
+    },
+    {
+      "pattern": "unauthorized access",
+      "severity": "HIGH",
+      "category": "auth"
+    },
+    {
+      "pattern": "privilege escalation",
+      "severity": "HIGH",
+      "category": "privesc"
+    },
+    {
+      "pattern": "data breach",
+      "severity": "HIGH",
+      "category": "breach"
+    },
+    {
+      "pattern": "credential theft",
+      "severity": "HIGH",
+      "category": "credential"
+    },
+    {
+      "pattern": "path traversal",
+      "severity": "MEDIUM",
+      "category": "lfi"
+    },
+    {
+      "pattern": "csrf",
+      "severity": "MEDIUM",
+      "category": "csrf"
+    }
+  ],
+  "geo_blocklist": {
+    "description": "High-risk geographic regions",
+    "regions": []
+  }
+}

@@ -1,0 +1,73 @@
+2026-04-24 08:15:23 INFO  [auth_service] User login successful for user: admin
+2026-04-24 08:16:45 INFO  [api_gateway] GET /api/users - 200 OK
+2026-04-24 08:17:12 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:15 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:18 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:21 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:24 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:27 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:30 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:33 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:36 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:39 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:42 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:45 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:48 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:51 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:54 WARNING  [auth_service] Failed login attempt for user: admin from IP 192.168.1.100
+2026-04-24 08:17:57 ERROR  [auth_service] Account locked due to repeated failed login attempts for user: admin from IP 192.168.1.100
+2026-04-24 08:18:10 INFO  [api_gateway] POST /api/data - 201 Created
+2026-04-24 08:19:22 DEBUG  [database] Query executed: SELECT * FROM users WHERE active=1
+2026-04-24 08:20:05 INFO  [scheduler] Daily backup started
+2026-04-24 08:20:45 INFO  [scheduler] Daily backup completed
+2026-04-24 08:21:30 WARNING  [firewall] Blocked connection from IP 10.0.0.50 - suspicious port scan detected
+2026-04-24 08:22:15 INFO  [api_gateway] GET /api/health - 200 OK
+2026-04-24 08:23:00 ERROR  [payment_service] SQL injection attempt detected in request: ' OR '1'='1
+2026-04-24 08:23:45 INFO  [auth_service] User logout for user: john.doe
+2026-04-24 08:24:30 WARNING  [api_gateway] Rate limit exceeded for IP 203.0.113.50
+2026-04-24 08:25:15 INFO  [cache_service] Cache invalidated for key: user_session_12345
+2026-04-24 08:26:00 CRITICAL [security] Potential XSS attack detected in comment field: <script>alert('xss')</script>
+2026-04-24 08:26:45 INFO  [api_gateway] PUT /api/settings - 200 OK
+2026-04-24 08:27:30 WARNING  [auth_service] Failed login attempt for user: root from IP 198.51.100.25
+2026-04-24 08:28:15 INFO  [metrics] System metrics collected: CPU 45%, Memory 62%, Disk 78%
+2026-04-24 08:29:00 ERROR  [database] Connection timeout to replica DB server
+2026-04-24 08:29:45 INFO  [api_gateway] DELETE /api/cache - 204 No Content
+2026-04-24 08:30:30 WARNING  [auth_service] Multiple failed logins for user: test from IP 192.0.2.100
+2026-04-24 08:31:15 INFO  [scheduler] Cleanup job started
+2026-04-24 08:32:00 INFO  [scheduler] Cleanup job completed - removed 1234 old records
+2026-04-24 08:32:45 DEBUG  [api_gateway] Request headers: {"Authorization": "Bearer ***"}
+2026-04-24 08:33:30 INFO  [auth_service] User login successful for user: manager
+2026-04-24 08:34:15 WARNING  [firewall] Outbound connection to known malicious IP 185.220.101.1 detected
+2026-04-24 08:35:00 INFO  [api_gateway] GET /api/dashboard - 200 OK
+2026-04-24 08:35:45 ERROR  [payment_service] Invalid credentials for user: billing from IP 203.0.113.75
+2026-04-24 08:36:30 INFO  [metrics] Application metrics: requests=1523, errors=2, latency_avg=45ms
+2026-04-24 08:37:15 WARNING  [security] Unusual activity detected from IP 198.51.100.50 - possible credential stuffing
+2026-04-24 08:38:00 INFO  [api_gateway] POST /api/reports - 201 Created
+2026-04-24 08:38:45 CRITICAL [security] Remote code execution attempt detected in filename parameter
+2026-04-24 08:39:30 INFO  [auth_service] Session refreshed for user: admin
+2026-04-24 08:40:15 WARNING  [api_gateway] Suspicious keyword detected: password dump in request body
+2026-04-24 08:41:00 INFO  [database] Index rebuild completed on table: transactions
+2026-04-24 08:41:45 ERROR  [auth_service] Authentication failed for user: support from IP 10.50.50.50
+2026-04-24 08:42:30 INFO  [api_gateway] GET /api/status - 200 OK
+2026-04-24 08:43:15 WARNING  [firewall] DDoS attack pattern detected from multiple IPs
+2026-04-24 08:44:00 INFO  [scheduler] Report generation completed
+2026-04-24 08:44:45 INFO  [auth_service] User login successful for user: analyst
+2026-04-24 08:45:30 CRITICAL [security] Data exfiltration attempt - large data transfer to external IP
+2026-04-24 08:46:15 INFO  [api_gateway] PATCH /api/config - 200 OK
+2026-04-24 08:47:00 WARNING  [auth_service] Failed login attempt for user: administrator from IP 192.0.2.200
+2026-04-24 08:47:45 DEBUG  [cache] Cache hit ratio: 94.5%
+2026-04-24 08:48:30 INFO  [api_gateway] GET /api/metrics - 200 OK
+2026-04-24 08:49:15 ERROR  [payment_service] Transaction failed - insufficient funds
+2026-04-24 08:50:00 INFO  [auth_service] User logout for user: analyst
+2026-04-24 08:50:45 WARNING  [security] Path traversal attempt in file parameter: ../../etc/passwd
+2026-04-24 08:51:30 INFO  [scheduler] Log rotation completed
+2026-04-24 08:52:15 INFO  [api_gateway] GET /api/users - 200 OK
+2026-04-24 08:53:00 CRITICAL [security] Zero-day exploit attempt detected in API endpoint
+2026-04-24 08:53:45 INFO  [metrics] System health: all services operational
+2026-04-24 08:54:30 WARNING  [auth_service] Repeated failed logins for user: demo from IP 203.0.113.100
+2026-04-24 08:55:15 INFO  [api_gateway] POST /api/orders - 201 Created
+2026-04-24 08:56:00 ERROR  [database] Deadlock detected on table: inventory
+2026-04-24 08:56:45 INFO  [auth_service] Password changed for user: manager
+2026-04-24 08:57:30 WARNING  [firewall] New device connected - MAC address not in whitelist
+2026-04-24 08:58:15 INFO  [api_gateway] GET /api/products - 200 OK
+2026-04-24 08:59:00 INFO  [scheduler] Daily report emailed to admins

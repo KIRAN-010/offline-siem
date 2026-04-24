@@ -1,0 +1,65 @@
+[
+  {
+    "timestamp": "2026-04-24T08:15:23.123Z",
+    "level": "INFO",
+    "logger": "auth_service",
+    "message": "User login successful for user: admin",
+    "ip": "192.168.1.10"
+  },
+  {
+    "timestamp": "2026-04-24T08:17:12.456Z",
+    "level": "WARNING",
+    "logger": "auth_service",
+    "message": "Failed login attempt for user: admin from IP 192.168.1.100",
+    "ip": "192.168.1.100"
+  },
+  {
+    "timestamp": "2026-04-24T08:17:57.789Z",
+    "level": "ERROR",
+    "logger": "auth_service",
+    "message": "Account locked due to repeated failed login attempts for user: admin from IP 192.168.1.100",
+    "ip": "192.168.1.100"
+  },
+  {
+    "timestamp": "2026-04-24T08:23:00.012Z",
+    "level": "ERROR",
+    "logger": "payment_service",
+    "message": "SQL injection attempt detected in request",
+    "ip": "203.0.113.50"
+  },
+  {
+    "timestamp": "2026-04-24T08:26:00.345Z",
+    "level": "CRITICAL",
+    "logger": "security",
+    "message": "Potential XSS attack detected in comment field",
+    "ip": "198.51.100.25"
+  },
+  {
+    "timestamp": "2026-04-24T08:34:15.678Z",
+    "level": "WARNING",
+    "logger": "firewall",
+    "message": "Outbound connection to known malicious IP detected",
+    "ip": "185.220.101.1"
+  },
+  {
+    "timestamp": "2026-04-24T08:38:45.901Z",
+    "level": "CRITICAL",
+    "logger": "security",
+    "message": "Remote code execution attempt detected in filename parameter",
+    "ip": "203.0.113.75"
+  },
+  {
+    "timestamp": "2026-04-24T08:45:30.234Z",
+    "level": "CRITICAL",
+    "logger": "security",
+    "message": "Data exfiltration attempt - large data transfer to external IP",
+    "ip": "198.51.100.50"
+  },
+  {
+    "timestamp": "2026-04-24T08:53:00.567Z",
+    "level": "CRITICAL",
+    "logger": "security",
+    "message": "Zero-day exploit attempt detected in API endpoint",
+    "ip": "192.0.2.100"
+  }
+]

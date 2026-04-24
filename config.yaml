@@ -1,0 +1,9 @@
+# Presidency App Configuration
+app:
+  title: "Presidency Analysis"
+  page_icon: "🏛️"
+  layout: "wide"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
