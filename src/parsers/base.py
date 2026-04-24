@@ -43,7 +43,20 @@ class BaseParser(ABC):
         Yields:
             Normalized log entries.
         """
-        content = file_path.read_text(encoding="utf-8")
+        # Try UTF-8 first, fallback to other encodings
+        content = None
+        encodings = ["utf-8", "utf-8-sig", "latin-1", "cp1252"]
+        for encoding in encodings:
+            try:
+                content = file_path.read_text(encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            # Last resort: read as bytes and decode with errors='replace'
+            content = file_path.read_bytes().decode("utf-8", errors="replace")
+        
         yield from self.parse(content)
 
     def can_parse(self, file_path: Path) -> bool:

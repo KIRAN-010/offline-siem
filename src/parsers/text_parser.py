@@ -12,11 +12,11 @@ from src.schema import LogLevel, NormalizedLog
 class PlainTextParser(BaseParser):
     """Parser for plain text logs.
 
-    Supports common patterns:
-    - ISO timestamp: 2024-01-15 10:30:45,123 INFO  [module] message
-    - Simple timestamp: 2024-01-15 10:30:45 INFO message
-    - Bracketed: [2024-01-15 10:30:45] [INFO] message
+    Supports common patterns and extracts IP addresses.
     """
+
+    # IP address pattern
+    IP_PATTERN = re.compile(r"\b\d{1,3}(\.\d{1,3}){3}\b")
 
     # Pattern: YYYY-MM-DD HH:MM:SS,ms LEVEL [logger] message
     ISO_PATTERN = re.compile(
@@ -50,7 +50,8 @@ class PlainTextParser(BaseParser):
 
     def parse(self, content: str) -> Iterator[NormalizedLog]:
         """Parse plain text log content."""
-        for line in content.split("\n"):
+        lines = content.split("\n")
+        for line in lines:
             line = line.strip()
             if not line:
                 continue
@@ -76,13 +77,28 @@ class PlainTextParser(BaseParser):
         if match:
             return self._create_entry(match.groupdict(), raw_line)
 
-        # No match - return as unknown
+        # No structured match - create generic entry
+        return self._create_generic_entry(raw_line)
+
+    def _create_generic_entry(self, raw_line: str) -> NormalizedLog:
+        """Create a generic entry for unstructured logs."""
+        # Extract IP address
+        ip_match = self.IP_PATTERN.search(raw_line)
+        ip = ip_match.group(0) if ip_match else ""
+
+        # Determine level based on content
+        level = self._infer_level(raw_line)
+
+        # Use entire line as message
+        message = raw_line
+
         return NormalizedLog(
             timestamp=datetime.now(),
-            level=LogLevel.UNKNOWN,
-            message=raw_line,
+            level=level,
+            message=message,
             raw_line=raw_line,
             format="text",
+            metadata={"ip": ip} if ip else {},
         )
 
     def _create_entry(self, groups: dict, raw_line: str) -> NormalizedLog:
@@ -99,6 +115,22 @@ class PlainTextParser(BaseParser):
 
         # Extract logger
         logger = groups.get("logger", "")
+
+        # Extract IP from message
+        ip_match = self.IP_PATTERN.search(raw_line)
+        ip = ip_match.group(0) if ip_match else ""
+
+        metadata = {"ip": ip} if ip else {}
+
+        return NormalizedLog(
+            timestamp=timestamp,
+            level=level,
+            message=message,
+            logger=logger,
+            raw_line=raw_line,
+            format="text",
+            metadata=metadata,
+        )
 
         return NormalizedLog(
             timestamp=timestamp,
@@ -118,6 +150,20 @@ class PlainTextParser(BaseParser):
             except ValueError:
                 continue
         return datetime.now()
+
+    def _infer_level(self, raw_line: str) -> LogLevel:
+        """Infer log level from content."""
+        line_lower = raw_line.lower()
+        if any(word in line_lower for word in ["error", "fail", "failed", "failure", "exception", "critical"]):
+            return LogLevel.ERROR
+        elif any(word in line_lower for word in ["warn", "warning"]):
+            return LogLevel.WARNING
+        elif any(word in line_lower for word in ["info", "information"]):
+            return LogLevel.INFO
+        elif any(word in line_lower for word in ["debug"]):
+            return LogLevel.DEBUG
+        else:
+            return LogLevel.UNKNOWN
 
     def _parse_level(self, level_str: str) -> LogLevel:
         """Parse log level string."""

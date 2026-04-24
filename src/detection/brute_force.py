@@ -20,7 +20,7 @@ class BruteForceDetector(BaseDetector):
 
     def __init__(
         self,
-        threshold: int = 10,
+        threshold: int = 5,
         window_minutes: int = 5,
         severity_threshold: int = 20,
     ):
@@ -62,32 +62,36 @@ class BruteForceDetector(BaseDetector):
 
     def _is_auth_failure(self, log: NormalizedLog) -> bool:
         """Check if log indicates an authentication failure."""
-        # Check level
-        if log.level not in (LogLevel.ERROR, LogLevel.WARNING):
-            # Also check message content
-            msg_lower = log.message.lower()
-            failure_indicators = [
-                "invalid credentials",
-                "authentication failed",
-                "login failed",
-                "bad credentials",
-                "wrong password",
-                "invalid username",
-                "account locked",
-                "access denied",
-                "unauthorized",
-                "failed login",
-                "登入失败",  # Chinese
-                "认证失败",
-            ]
-            return any(ind in msg_lower for ind in failure_indicators)
-        return True
+        msg_lower = log.message.lower()
+        failure_indicators = [
+            "fail", "failed", "failure", "error",
+            "invalid credentials",
+            "authentication failed",
+            "login failed",
+            "bad credentials",
+            "wrong password",
+            "invalid username",
+            "account locked",
+            "access denied",
+            "unauthorized",
+            "failed login",
+            "登入失败",  # Chinese
+            "认证失败",
+        ]
+        return any(ind in msg_lower for ind in failure_indicators)
 
     def _get_identifier(self, log: NormalizedLog) -> str | None:
         """Get source identifier (IP, user, etc.) from log."""
         # Try metadata first
         if ip := log.metadata.get("ip") or log.metadata.get("source_ip"):
             return ip
+
+        # Try to extract IP from raw line
+        import re
+        ip_pattern = re.compile(r"\b\d{1,3}(\.\d{1,3}){3}\b")
+        match = ip_pattern.search(log.raw_line)
+        if match:
+            return match.group(0)
 
         # Try from logger name
         if log.logger:

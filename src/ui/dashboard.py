@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Page configuration
 st.set_page_config(
-    page_title="Presidency SOC",
+    page_title="Offline SIEM",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -25,7 +25,7 @@ def init_session_state():
 def render_sidebar():
     """Render the sidebar navigation."""
     with st.sidebar:
-        st.title("🛡️ Presidency SOC")
+        st.title("🛡️ Offline SIEM")
         st.markdown("---")
 
         # Navigation
@@ -102,13 +102,11 @@ def render_logs_page(logs: list, filters: dict):
 
     # Filters
     with st.expander("Filters", expanded=True):
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
-            level_filter = st.selectbox("Level", ["All"] + ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+            ip_filter = st.text_input("IP Address")
         with col2:
-            logger_filter = st.text_input("Logger")
-        with col3:
-            source_filter = st.text_input("Source")
+            event_filter = st.text_input("Event/Message")
 
     # Search
     search_query = st.text_input("Search logs", placeholder="Enter search term...")
@@ -117,11 +115,26 @@ def render_logs_page(logs: list, filters: dict):
     st.subheader(f"Showing {len(logs)} logs")
 
     if logs:
-        for log in logs[:50]:
-            with st.expander(f"{log.get('timestamp', '')[:19]} | {log.get('level', '')} | {log.get('logger', 'N/A')}"):
-                st.write(f"**Message:** {log.get('message', 'N/A')}")
-                st.write(f"**Source:** {log.get('source', 'N/A')}")
-                st.write(f"**Raw:** {log.get('raw_line', 'N/A')[:200]}...")
+        # Apply filters
+        filtered_logs = logs
+        if ip_filter:
+            filtered_logs = [l for l in filtered_logs if ip_filter.lower() in l.get('ip', '').lower()]
+        if event_filter:
+            filtered_logs = [l for l in filtered_logs if event_filter.lower() in l.get('event', '').lower()]
+        if search_query:
+            filtered_logs = [l for l in filtered_logs if search_query.lower() in str(l).lower()]
+
+        st.subheader(f"Showing {len(filtered_logs)} filtered logs")
+
+        for log in filtered_logs[:50]:
+            timestamp = log.get('timestamp', '')[:19] if log.get('timestamp') else 'N/A'
+            ip = log.get('ip', 'N/A')
+            event = log.get('event', 'N/A')[:100]
+            with st.expander(f"{timestamp} | {ip} | {event}"):
+                st.write(f"**Timestamp:** {log.get('timestamp', 'N/A')}")
+                st.write(f"**IP:** {log.get('ip', 'N/A')}")
+                st.write(f"**Event:** {log.get('event', 'N/A')}")
+                st.write(f"**Raw:** {log.get('raw', 'N/A')[:200]}{'...' if len(log.get('raw', '')) > 200 else ''}")
     else:
         st.info("No logs found. Upload log files to get started.")
 
@@ -281,9 +294,162 @@ def render_upload_section():
             st.write(f"- {f.name} ({f.size} bytes)")
 
         if st.button("Process Files"):
-            st.success("Files processed successfully!")
+            process_uploaded_files(uploaded_files)
 
     return uploaded_files
+
+
+def process_uploaded_files(uploaded_files):
+    """Process uploaded files: parse, detect, save."""
+    try:
+        # Initialize components
+        from src.parsers.robust_parser import parse_logs
+        from src.detection.robust_detection import detect_alerts
+        from src.storage import LogStorage, AlertStorage, get_database
+
+        db = get_database()
+        log_storage = LogStorage(db)
+        alert_storage = AlertStorage(db)
+
+        # Get current session
+        from src.storage import SessionManager
+        session_mgr = SessionManager(db)
+        if not st.session_state.session_id:
+            st.session_state.session_id = session_mgr.create_session(name="Analysis Session")
+        session_id = st.session_state.session_id
+
+        total_logs = 0
+        total_alerts = 0
+        all_raw_lines = []
+        all_parsed_logs = []
+
+        # Process each file
+        for uploaded_file in uploaded_files:
+            st.write(f"Processing {uploaded_file.name}...")
+
+            # Read file content safely
+            try:
+                content = uploaded_file.read().decode("utf-8")
+            except UnicodeDecodeError:
+                try:
+                    content = uploaded_file.read().decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    content = uploaded_file.read().decode("latin-1", errors="replace")
+
+            # Split into lines and show debug info
+            lines = content.split("\n")
+            st.write(f"  - Read {len(lines)} lines")
+            if lines:
+                st.write(f"  - First 5 lines preview:")
+                for i, line in enumerate(lines[:5]):
+                    st.write(f"    {i+1}: {line[:100]}{'...' if len(line) > 100 else ''}")
+
+            all_raw_lines.extend(lines[:10])  # Keep first 10 for debug
+
+            # Parse logs using robust parser
+            try:
+                parsed_logs = parse_logs(content)
+                st.write(f"  - Parsed {len(parsed_logs)} log entries")
+                all_parsed_logs.extend(parsed_logs[:10])  # Keep first 10 for debug
+
+                if parsed_logs:
+                    st.write("  - Parsed logs preview:")
+                    for i, log in enumerate(parsed_logs[:3]):
+                        st.write(f"    {i+1}: timestamp='{log.get('timestamp', '')}', ip='{log.get('ip', '')}', event='{log.get('event', '')[:50]}...'")
+
+                # Convert to NormalizedLog for storage
+                normalized_logs = []
+                for log_dict in parsed_logs:
+                    from src.schema import NormalizedLog, LogLevel
+                    from datetime import datetime
+
+                    # Parse timestamp
+                    ts_str = log_dict.get("timestamp", "")
+                    try:
+                        timestamp = datetime.fromisoformat(ts_str) if ts_str else datetime.now()
+                    except ValueError:
+                        timestamp = datetime.now()
+
+                    normalized_log = NormalizedLog(
+                        timestamp=timestamp,
+                        level=LogLevel.UNKNOWN,
+                        message=log_dict.get("event", ""),
+                        raw_line=log_dict.get("raw", ""),
+                        format="robust",
+                        metadata={"ip": log_dict.get("ip", "")}
+                    )
+                    normalized_logs.append(normalized_log)
+
+                # Save logs
+                if normalized_logs:
+                    log_storage.save_logs(session_id, normalized_logs)
+                    total_logs += len(normalized_logs)
+
+                # Run detection
+                alerts = detect_alerts(parsed_logs)
+                st.write(f"  - Generated {len(alerts)} alerts")
+
+                # Convert alerts to Alert objects for storage
+                alert_objects = []
+                for alert in alerts:
+                    from src.detection.alert import Alert as AlertObj, AlertSeverity, AlertType
+                    severity_map = {"CRITICAL": AlertSeverity.CRITICAL, "HIGH": AlertSeverity.HIGH,
+                                  "MEDIUM": AlertSeverity.MEDIUM, "LOW": AlertSeverity.LOW}
+                    type_map = {"BRUTE_FORCE": AlertType.BRUTE_FORCE}
+
+                    alert_obj = AlertObj(
+                        id=f"{alert.alert_type}_{alert.ip}_{alert.count}",
+                        alert_type=type_map.get(alert.alert_type, AlertType.BRUTE_FORCE),
+                        severity=severity_map.get(alert.severity, AlertSeverity.MEDIUM),
+                        reason=alert.reason,
+                        description=alert.description,
+                        source_logs=[],  # Could add raw lines here
+                        indicators={"ip": alert.ip, "count": alert.count},
+                        matched_pattern=f"{alert.count} failures",
+                        confidence=0.8,
+                        metadata={}
+                    )
+                    alert_objects.append(alert_obj)
+
+                # Save alerts
+                if alert_objects:
+                    alert_storage.save_alerts(session_id, alert_objects)
+                    total_alerts += len(alert_objects)
+
+            except Exception as parse_error:
+                st.error(f"Error parsing {uploaded_file.name}: {str(parse_error)}")
+                continue
+
+        # Show summary
+        st.success(f"Processing complete! Total: {total_logs} logs, {total_alerts} alerts")
+
+        # Show debug info
+        with st.expander("Debug Information", expanded=True):
+            st.write(f"**Total lines read:** {len(all_raw_lines)}")
+            st.write("**Raw lines preview:**")
+            for i, line in enumerate(all_raw_lines[:10]):
+                st.write(f"{i+1}: {line}")
+
+            st.write(f"**Parsed logs count:** {len(all_parsed_logs)}")
+            st.write("**Parsed logs preview:**")
+            for i, log in enumerate(all_parsed_logs[:5]):
+                st.write(f"{i+1}: {log}")
+
+            st.write(f"**Alerts count:** {total_alerts}")
+
+            if total_alerts == 0:
+                st.warning("No alerts detected. This might indicate:")
+                st.write("- Logs don't contain failure/error patterns")
+                st.write("- IP addresses not extracted properly")
+                st.write("- Detection thresholds not met")
+
+        # Refresh the page to show updated data
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"Error processing files: {str(e)}")
+        st.write("Full error details:")
+        st.code(str(e))
 
 
 def render_main():
@@ -319,7 +485,17 @@ def render_main():
     elif current_tab == "Logs":
         from src.storage import LogStorage
         logs = LogStorage(db).get_logs(session_id, limit=100) if db else []
-        render_logs_page([dict(l) for l in logs], {})
+        # Convert NormalizedLog to dict format expected by UI
+        log_dicts = []
+        for log in logs:
+            log_dict = {
+                "timestamp": log.timestamp.isoformat(),
+                "ip": log.metadata.get("ip", ""),
+                "event": log.message,
+                "raw": log.raw_line
+            }
+            log_dicts.append(log_dict)
+        render_logs_page(log_dicts, {})
     elif current_tab == "Alerts":
         from src.storage import AlertStorage
         alerts = AlertStorage(db).get_alerts(session_id) if db else []

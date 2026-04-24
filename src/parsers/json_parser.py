@@ -88,8 +88,16 @@ class JSONParser(BaseParser):
             "line",
             "lineNumber",
             "lineno",
+            "ip",
+            "source_ip",
+            "client_ip",
         }
         metadata = {k: v for k, v in entry.items() if k not in known_fields}
+
+        # Extract IP address
+        ip = self._extract_ip(entry, message)
+        if ip:
+            metadata["ip"] = ip
 
         return NormalizedLog(
             timestamp=timestamp,
@@ -145,3 +153,22 @@ class JSONParser(BaseParser):
             if field in entry:
                 return str(entry[field])
         return str(entry)
+
+    def _extract_ip(self, entry: dict, message: str) -> str | None:
+        """Extract IP address from entry."""
+        import re
+        ip_pattern = re.compile(r"\b\d{1,3}(\.\d{1,3}){3}\b")
+
+        # Check common IP fields
+        for field in ["ip", "source_ip", "client_ip", "remote_ip", "host"]:
+            if field in entry and isinstance(entry[field], str):
+                match = ip_pattern.search(entry[field])
+                if match:
+                    return match.group(0)
+
+        # Check message
+        match = ip_pattern.search(message)
+        if match:
+            return match.group(0)
+
+        return None

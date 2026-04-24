@@ -22,9 +22,9 @@ def main() -> None:
 
     # Page configuration
     st.set_page_config(
-        page_title=config["app"]["title"],
-        page_icon=config["app"]["page_icon"],
-        layout=config["app"]["layout"],
+        page_title="Offline SIEM",
+        page_icon="🛡️",
+        layout="wide",
         initial_sidebar_state="expanded",
     )
 

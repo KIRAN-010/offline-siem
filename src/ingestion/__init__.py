@@ -16,6 +16,47 @@ class LogIngestor:
     def __init__(self, parser_registry: ParserRegistry | None = None):
         self.parser_registry = parser_registry or ParserRegistry()
 
+    def ingest_content(
+        self,
+        content: str,
+        format: str | None = None,
+        filename: str | None = None,
+    ) -> Iterator[NormalizedLog]:
+        """Ingest log content directly.
+
+        Args:
+            content: Raw log content.
+            format: Optional format override (json, syslog, text, csv).
+            filename: Optional filename for format detection.
+
+        Yields:
+            Normalized log entries.
+        """
+        # Use specified format or auto-detect from filename
+        if format:
+            parser = self.parser_registry.get_parser(format)
+            if parser is None:
+                logger.error(f"Unknown format: {format}")
+                return
+        elif filename:
+            # Create a dummy path for detection
+            from pathlib import Path
+            dummy_path = Path(filename)
+            parser = self.parser_registry.get_parser_for_file(dummy_path)
+        else:
+            # Default to text parser
+            parser = self.parser_registry.get_parser("text")
+
+        if parser is None:
+            logger.error("No suitable parser found")
+            return
+
+        # Parse content
+        try:
+            yield from parser.parse(content)
+        except Exception as e:
+            logger.error(f"Error parsing content: {e}")
+
     def ingest_file(
         self,
         file_path: str | Path,
