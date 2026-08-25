@@ -1,7 +1,4 @@
-"""Presidency App - Main Entry Point."""
-
-import logging
-from pathlib import Path
+"""Offline SIEM — Streamlit application entry point."""
 
 import streamlit as st
 
@@ -11,16 +8,10 @@ from src.ui.dashboard import render_main
 
 
 def main() -> None:
-    """Run the Streamlit application."""
-    # Setup logging
+    """Run the Offline SIEM application."""
     logger = setup_logging()
-    logger.info("Starting Presidency SOC App")
+    load_config()
 
-    # Load configuration
-    config = load_config()
-    logger.info("Configuration loaded successfully")
-
-    # Page configuration
     st.set_page_config(
         page_title="Offline SIEM",
         page_icon="🛡️",
@@ -28,7 +19,6 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
 
-    # Hide Streamlit Deploy button and toolbar
     st.markdown(
         """
         <style>
@@ -40,10 +30,8 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    # Render the main UI
+    logger.info("Starting Offline SIEM")
     render_main()
-
-    logger.info("App rendered successfully")
 
 
 if __name__ == "__main__":
