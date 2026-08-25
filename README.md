@@ -1,252 +1,135 @@
-# Offline SIEM - Security Operations Center
+# Offline SIEM — Security Operations Center
 
-An advanced offline security information and event management (SIEM) system designed for air-gapped environments and critical infrastructure protection.
+A defensive, offline Security Information and Event Management (SIEM) platform for security analysis in air-gapped or restricted environments.
 
-## Features
+## What it does
 
-- **Scalable Log Processing**: Streaming ingestion for large log files (5GB+) with bounded memory usage
-- **Advanced Detection Engine**: Statistical and rule-based threat detection
-  - Brute force attack detection with Z-score anomaly analysis
-  - Failed login tracking with time-window logic
-  - Suspicious keyword detection
-  - Threat intelligence matching with offline updates
-  - Statistical anomaly detection (Z-score based)
-- **High-Performance Search**: Inverted index for O(1) keyword lookups
-- **Analytics**: Search, filter, group, correlate, and timeline analysis
-- **Incident Management**: Create, track, and resolve security incidents
-- **Offline Threat Intelligence**: Versioned updates with SHA-256 integrity verification
-- **Cryptographic Security**: SHA-256 file integrity, HMAC support, constant-time comparisons
-- **Reporting**: HTML and TXT reports with cryptographic signing
-
-## Installation
-
-### Prerequisites
-
-- Python 3.10+
-- Windows/macOS/Linux
-
-### Setup
-
-```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+```text
+Log files → Parser/Normalization → Detection Engine → Alerts → Investigation
+                                      ↓
+                         Threat Intel / Analytics
+                                      ↓
+                           Incident + Reporting
 ```
+
+### Core capabilities
+
+- JSON, JSONL, CSV, syslog and text log parsing into a common schema
+- Sliding-window brute-force detection
+- Per-user repeated failed-login detection
+- Suspicious security-pattern detection
+- Offline IP/CIDR threat-intelligence matching
+- Statistical anomaly detection
+- SQLite session, log, alert, incident and audit storage
+- Search, filtering, grouping, correlation and timeline analysis
+- HTML/TXT report generation
+- SHA-256 integrity verification and HMAC support
+- Salted PBKDF2-HMAC-SHA256 password protection
+- Streamlit SOC dashboard
+- Automated regression tests with GitHub Actions
+
+## Quick start
 
 ### Requirements
 
-```
-streamlit>=1.28.0
-pyyaml>=6.0
-scikit-learn>=1.0.0
-pandas>=1.5.0
-numpy>=1.21.0
-```
-
-## Usage
-
-### Running the Application
+- Python 3.10+
+- Windows, Linux or macOS
 
 ```bash
-# Start the Streamlit dashboard
+python -m venv .venv
+
+# Linux/macOS
+source .venv/bin/activate
+
+# Windows
+.venv\\Scripts\\activate
+
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The application will be available at `http://localhost:8501`
+Open the local Streamlit URL shown in the terminal.
 
-### Using the CLI
+## Dashboard workflow
 
-```python
-from src.ingestion import LogIngestor
-from src.detection import DetectionEngine
-from src.storage import (
-    get_database, SessionManager, LogStorage,
-    AlertStorage, IncidentManager
-)
-from src.analytics import TimelineBuilder
-from src.reporting import ReportGenerator
+1. Start the application.
+2. Open **Dashboard → Ingest Logs**.
+3. Upload `.log`, `.txt`, `.syslog`, `.json`, `.jsonl` or `.csv` files.
+4. Click **Process Files**.
+5. Review logs, alerts, incidents and timeline activity.
+6. Generate an HTML or TXT investigation report.
 
-# Initialize
-db = get_database()
-session_mgr = SessionManager(db)
+Uploaded files are limited to 25 MB per file in the Streamlit UI to prevent accidental memory exhaustion. The underlying ingestion components can also be used programmatically for larger datasets.
 
-# Create session
-session_id = session_mgr.create_session(name="Analysis")
+## Detection engine
 
-# Ingest logs
-ingestor = LogIngestor()
-logs = list(ingestor.ingest_file("samples/sample_logs.txt"))
+| Detector | Purpose |
+|---|---|
+| `BruteForceDetector` | Repeated authentication failures within a configurable sliding window |
+| `FailedLoginDetector` | Repeated failures against an individual account |
+| `KeywordDetector` | Security-relevant patterns such as SQL injection, XSS and privilege escalation |
+| `ThreatIntelDetector` | Matches IPv4 addresses and CIDRs against offline intelligence |
+| `AnomalyDetector` | Statistical deviations in log activity |
 
-# Save logs
-log_storage = LogStorage(db)
-log_storage.save_logs(session_id, logs)
+The brute-force detector triggers on the configured absolute threshold even when no statistical baseline exists; statistical analysis is used as additional context rather than suppressing the initial detection.
 
-# Run detection
-engine = DetectionEngine()
-alerts = engine.detect(iter(logs))
+## Offline threat intelligence
 
-# Save alerts
-alert_storage = AlertStorage(db)
-alert_storage.save_alerts(session_id, alerts)
+The sample threat-intelligence file supports the repository's structured `suspicious_ips` format. The manager also accepts normalized `threat_ips` lists and validates IP/CIDR entries. Imported intelligence is stored locally and protected with a SHA-256 content digest.
 
-# Generate report
-generator = ReportGenerator(db)
-html_path = generator.generate_report(session_id, "html")
+## Security design
+
+- Runtime SQLite databases, passwords, reports, logs and Python bytecode are excluded from Git.
+- Passwords are stored using salted PBKDF2-HMAC-SHA256 rather than plaintext or unsalted hashes.
+- Uploaded content is size-limited and decoded once before parsing.
+- Detection alert IDs are deterministic where appropriate to improve deduplication.
+- Raw log lines are retained for investigation traceability.
+
+## Tests
+
+```bash
+pytest -q
 ```
 
-## Project Structure
+GitHub Actions runs the regression suite on pushes to `main`/`stabilize-and-harden` and pull requests targeting `main`.
 
-```
+## Project structure
+
+```text
 offline-siem/
-├── app.py                    # Main entry point
-├── config.yaml               # Configuration
-├── requirements.txt          # Dependencies
-├── samples/                  # Sample data
-│   ├── sample_logs.txt       # Plain text logs
-│   ├── sample_logs.json      # JSON logs
-│   ├── sample_logs.csv       # CSV logs
-│   └── threat_intel.json     # Threat intelligence
-├── src/
-│   ├── schema.py             # Common log schema
-│   ├── config.py             # Config loader
-│   ├── logging_config.py    # Logging setup
-│   ├── ingestion/            # Log ingestion
-│   │   └── __init__.py       # LogIngestor
-│   ├── parsers/              # Log parsers
-│   │   ├── base.py           # BaseParser
-│   │   ├── json_parser.py   # JSON parser
-│   │   ├── syslog_parser.py # Syslog parser
-│   │   ├── text_parser.py   # Text parser
-│   │   ├── csv_parser.py    # CSV parser
-│   │   └── __init__.py      # ParserRegistry
-│   ├── detection/            # Detection engine
-│   │   ├── alert.py          # Alert schema
-│   │   ├── base.py           # BaseDetector
-│   │   ├── brute_force.py   # BruteForceDetector
-│   │   ├── failed_login.py   # FailedLoginDetector
-│   │   ├── keyword_detector.py
-│   │   ├── threat_intel.py   # ThreatIntelDetector
-│   │   ├── anomaly.py        # AnomalyDetector
-│   │   ├── engine.py         # DetectionEngine
-│   │   └── __init__.py
-│   ├── storage/              # Storage layer
-│   │   ├── database.py       # SQLite manager
-│   │   ├── session.py        # SessionManager
-│   │   ├── file_tracker.py   # FileTracker
-│   │   ├── log_storage.py    # LogStorage
-│   │   ├── alert_storage.py  # AlertStorage
-│   │   ├── incident.py       # IncidentManager
-│   │   ├── audit.py          # AuditLogger
-│   │   └── __init__.py
-│   ├── analytics/            # Analytics
-│   │   ├── search.py         # SearchEngine
-│   │   ├── filter.py         # FilterBuilder
-│   │   ├── grouping.py       # GroupingEngine
-│   │   ├── correlation.py    # CorrelationEngine
-│   │   ├── timeline.py       # TimelineBuilder
-│   │   └── __init__.py
-│   ├── reporting/            # Reporting
-│   │   ├── base.py           # BaseReport
-│   │   ├── html_report.py   # HTMLReport
-│   │   ├── text_report.py   # TextReport
-│   │   ├── generator.py     # ReportGenerator
-│   │   └── __init__.py
-│   ├── security/             # Security helpers
-│   │   ├── validation.py    # InputValidator
-│   │   ├── password_gate.py # PasswordGate
-│   │   ├── signing.py       # ReportSigner
-│   │   ├── file_handler.py  # SafeFileHandler
-│   │   └── __init__.py
-│   └── ui/                   # Streamlit UI
-│       ├── dashboard.py     # Dashboard
-│       └── __init__.py
-└── data/                     # Data directory (created on first run)
+├── app.py
+├── config.yaml
+├── requirements.txt
+├── samples/
+├── tests/
+└── src/
+    ├── analytics/
+    ├── detection/
+    ├── ingestion/
+    ├── parsers/
+    ├── reporting/
+    ├── security/
+    ├── storage/
+    └── ui/
 ```
 
-## Demo Workflow
-
-### 1. Start the Application
-
-```bash
-streamlit run app.py
-```
-
-### 2. Upload Sample Logs
-
-1. Navigate to the Dashboard
-2. Use the file uploader to upload `samples/sample_logs.txt`
-3. Click "Process Files"
-
-### 3. View Analysis Results
-
-- **Dashboard**: See summary metrics (logs, alerts, incidents)
-- **Alerts**: View detected threats with severity levels
-- **Timeline**: See activity over time
-- **Reports**: Generate HTML/TXT reports
-
-### 4. Generate a Report
-
-1. Go to the Reports page
-2. Select format (HTML or TXT)
-3. Click "Generate Report"
-4. Report saved to `reports/` directory
-
-## Detection Examples
-
-The sample logs contain various attack patterns:
-
-| Attack Type | Log Lines | Detection |
-|-------------|-----------|-----------|
-| Brute Force | 15 failed logins in 30s | BruteForceDetector |
-| SQL Injection | "SQL injection attempt" | KeywordDetector |
-| XSS Attack | "XSS attack detected" | KeywordDetector |
-| Suspicious IP | 185.220.101.1 | ThreatIntelDetector |
-| Anomaly | Unusual patterns | AnomalyDetector |
-
-## Security Features
-
-### Input Validation
+## Example programmatic workflow
 
 ```python
-from src.security import InputValidator
+from src.detection import DetectionEngine
+from src.parsers import registry
+from src.storage import AlertStorage, LogStorage, SessionManager, get_database
 
-InputValidator.validate_session_id(session_id)
-InputValidator.validate_file_path(file_path)
-InputValidator.sanitize_search_query(query)
-```
+content = open("samples/sample_logs.txt", encoding="utf-8").read()
+logs = list(registry.parse_content(content, "text"))
 
-### Password Gating
-
-```python
-from src.security import get_password_gate
-
-gate = get_password_gate()
-gate.set_password("secure123")
-gate.verify("secure123")
-```
-
-### Report Signing
-
-```python
-from src.security import get_signer
-
-signer = get_signer()
-hash = signer.compute_content_hash(content)
-signature = signer.sign_content(content)
+db = get_database()
+session_id = SessionManager(db).create_session(name="Analysis")
+LogStorage(db).save_logs(session_id, logs)
+alerts = DetectionEngine().detect_batch(logs)
+AlertStorage(db).save_alerts(session_id, alerts)
 ```
 
 ## License
 
 MIT License
-
-## Support
-
-For issues and questions, please refer to the project documentation.
