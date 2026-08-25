@@ -1,0 +1,7 @@
+{
+  "name": "Example Internet-Facing Application",
+  "components": ["Internet", "Web App", "API", "Database", "Object Storage", "Admin Portal"],
+  "controls": ["database public", "storage public", "admin broad", "no segmentation", "no central logging", "secret in config"],
+  "traffic": "unencrypted internal traffic",
+  "backup": "not documented"
+}
