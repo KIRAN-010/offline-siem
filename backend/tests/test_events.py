@@ -31,11 +31,17 @@ def test_event_ingest_and_query(tmp_path, monkeypatch):
 
     ingest = client.post("/api/v1/events", json=[SAMPLE_EVENT])
     assert ingest.status_code == 201
-    assert ingest.json() == {"accepted": 1, "received": 1}
+    assert ingest.json() == {
+        "accepted": 1,
+        "received": 1,
+        "alerts_generated": 0,
+    }
 
     duplicate = client.post("/api/v1/events", json=[SAMPLE_EVENT])
     assert duplicate.status_code == 201
-    assert duplicate.json() == {"accepted": 0, "received": 1}
+    assert duplicate.json()["accepted"] == 0
+    assert duplicate.json()["received"] == 1
+    assert duplicate.json()["alerts_generated"] == 0
 
     result = client.get(
         "/api/v1/events",
