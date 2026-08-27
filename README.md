@@ -1,18 +1,45 @@
-# Offline SIEM — Security Operations Center
+# SentinelX — Offline Security Operations & Detection Platform
 
-A defensive, offline Security Information and Event Management (SIEM) platform for security analysis in air-gapped or restricted environments.
+SentinelX is an offline-first Security Operations platform for collecting, normalizing, detecting and investigating security activity in restricted or air-gapped environments. It combines the repository's SIEM engine with a FastAPI service for event ingestion, alert triage, dashboard telemetry and incident case management.
 
-## What it does
+## Architecture
 
 ```text
-Log files → Parser/Normalization → Detection Engine → Alerts → Investigation
-                                      ↓
-                         Threat Intel / Analytics
-                                      ↓
-                           Incident + Reporting
+Logs / Endpoints / Network
+            |
+            v
+     Parsing & Normalization
+            |
+            v
+        Event Store
+            |
+       +----+----+
+       |         |
+       v         v
+  Detection   Threat Intel
+    Engine       Engine
+       |         |
+       +----+----+
+            |
+            v
+      Alert Generation
+            |
+            v
+      Correlation / Risk
+            |
+            v
+       Incident Cases
+            |
+       +----+-----+-------+
+       |          |       |
+       v          v       v
+    Timeline   ATT&CK   Reports
+       |
+       v
+     SOC UI / API / Hunting
 ```
 
-### Core capabilities
+## Current capabilities
 
 - JSON, JSONL, CSV, syslog and text log parsing into a common schema
 - Sliding-window brute-force detection
@@ -20,13 +47,14 @@ Log files → Parser/Normalization → Detection Engine → Alerts → Investiga
 - Suspicious security-pattern detection
 - Offline IP/CIDR threat-intelligence matching
 - Statistical anomaly detection
-- SQLite session, log, alert, incident and audit storage
-- Search, filtering, grouping, correlation and timeline analysis
-- HTML/TXT report generation
-- SHA-256 integrity verification and HMAC support
-- Salted PBKDF2-HMAC-SHA256 password protection
+- SQLite storage for events, alerts and incidents
+- Deterministic event/alert identifiers for local deduplication
+- FastAPI event ingestion and search
+- Alert filtering and analyst triage lifecycle
+- SOC dashboard summary metrics
+- Incident/case creation from related alert identifiers
 - Streamlit SOC dashboard
-- FastAPI event ingestion/search service
+- HTML/TXT investigation reports
 - Automated regression tests with GitHub Actions
 
 ## Quick start
@@ -49,37 +77,27 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Open the local Streamlit URL shown in the terminal.
-
-### Optional API service
-
-The FastAPI service stores normalized security events in a local SQLite database and exposes health, readiness, ingestion and search endpoints.
+### API service
 
 ```bash
 pip install -r backend/requirements.txt
 uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Useful endpoints:
+Swagger documentation is available at `http://127.0.0.1:8000/docs` while the API is running.
+
+### API endpoints
 
 - `GET /health`
 - `GET /ready`
 - `GET /api/v1`
 - `POST /api/v1/events`
 - `GET /api/v1/events`
-
-Swagger documentation is available at `http://127.0.0.1:8000/docs` while the API is running.
-
-## Dashboard workflow
-
-1. Start the application.
-2. Open **Dashboard → Ingest Logs**.
-3. Upload `.log`, `.txt`, `.syslog`, `.json`, `.jsonl` or `.csv` files.
-4. Click **Process Files**.
-5. Review logs, alerts, incidents and timeline activity.
-6. Generate an HTML or TXT investigation report.
-
-Uploaded files are limited to 25 MB per file in the Streamlit UI to prevent accidental memory exhaustion. The underlying ingestion components can also be used programmatically for larger datasets.
+- `GET /api/v1/alerts`
+- `PATCH /api/v1/alerts/{alert_uid}/status`
+- `GET /api/v1/dashboard/summary`
+- `POST /api/v1/incidents`
+- `GET /api/v1/incidents`
 
 ## Detection engine
 
@@ -91,30 +109,36 @@ Uploaded files are limited to 25 MB per file in the Streamlit UI to prevent acci
 | `ThreatIntelDetector` | Matches IPv4 addresses and CIDRs against offline intelligence |
 | `AnomalyDetector` | Statistical deviations in log activity |
 
-The brute-force detector triggers on the configured absolute threshold even when no statistical baseline exists; statistical analysis is used as additional context rather than suppressing the initial detection.
+The existing detection engine remains the source of truth for detection logic; the API layer adapts canonical events into its `NormalizedLog` model instead of maintaining a second detector implementation.
 
-## Offline threat intelligence
+## Analyst workflow
 
-The sample threat-intelligence file supports the repository's structured `suspicious_ips` format. The manager also accepts normalized `threat_ips` lists and validates IP/CIDR entries. Imported intelligence is stored locally and protected with a SHA-256 content digest.
+1. Ingest or upload security logs.
+2. Normalize events into the SentinelX schema.
+3. Run the existing detection suite.
+4. Persist generated alerts.
+5. Triage alerts using status changes.
+6. Group related alerts into an incident case.
+7. Investigate evidence and timeline activity.
+8. Generate a report.
 
 ## Security design
 
-- Runtime SQLite databases, passwords, reports, logs and Python bytecode are excluded from Git.
-- Passwords are stored using salted PBKDF2-HMAC-SHA256 rather than plaintext or unsalted hashes.
-- Uploaded content is size-limited and decoded once before parsing.
-- Detection alert IDs are deterministic where appropriate to improve deduplication.
-- Raw log lines are retained for investigation traceability.
-- The API uses parameterized SQLite queries and deterministic event IDs for local deduplication.
+- Core analysis works without external threat-intelligence APIs.
+- Runtime databases, credentials, reports, logs and Python bytecode remain excluded from Git.
+- Uploaded content is size-limited in the Streamlit UI.
+- API queries use parameterized SQLite statements.
+- Raw event content is retained for investigation traceability.
+- Incident and alert data are stored locally for restricted environments.
 
-## Tests
+## Testing
 
 ```bash
-# Full regression suite, including the API tests
 pip install -r requirements.txt -r backend/requirements.txt
 pytest -q
 ```
 
-GitHub Actions runs the regression suite on pushes to `main`/`stabilize-and-harden` and pull requests targeting `main`.
+GitHub Actions runs the regression suite for pushes to `main`/`stabilize-and-harden` and pull requests targeting `main`.
 
 ## Project structure
 
@@ -125,6 +149,7 @@ offline-siem/
 │   ├── app/
 │   └── tests/
 ├── config.yaml
+├── docs/
 ├── requirements.txt
 ├── samples/
 ├── tests/
@@ -139,22 +164,9 @@ offline-siem/
     └── ui/
 ```
 
-## Example programmatic workflow
+## Roadmap
 
-```python
-from src.detection import DetectionEngine
-from src.parsers import registry
-from src.storage import AlertStorage, LogStorage, SessionManager, get_database
-
-content = open("samples/sample_logs.txt", encoding="utf-8").read()
-logs = list(registry.parse_content(content, "text"))
-
-db = get_database()
-session_id = SessionManager(db).create_session(name="Analysis")
-LogStorage(db).save_logs(session_id, logs)
-alerts = DetectionEngine().detect_batch(logs)
-AlertStorage(db).save_alerts(session_id, alerts)
-```
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the implementation milestones. The next major feature is automated alert correlation/risk scoring followed by threat hunting and a full analyst dashboard.
 
 ## License
 
