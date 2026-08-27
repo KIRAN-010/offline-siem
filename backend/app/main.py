@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
 from .routes_alerts import router as alerts_router
@@ -12,13 +13,23 @@ from .routes_incidents import router as incidents_router
 from .routes_investigation import router as investigation_router
 
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 app = FastAPI(
     title="SentinelX SOC API",
     description="Offline-first Security Operations and Detection Platform",
     version=APP_VERSION,
 )
+
+# Local development frontend origins. Production deployments should override this policy at the edge.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
 app.include_router(events_router)
 app.include_router(alerts_router)
 app.include_router(dashboard_router)
