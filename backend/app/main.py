@@ -5,10 +5,11 @@ from fastapi import FastAPI
 
 from .db import init_db
 from .routes_alerts import router as alerts_router
+from .routes_dashboard import router as dashboard_router
 from .routes_events import router as events_router
 
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 
 app = FastAPI(
     title="SentinelX SOC API",
@@ -17,6 +18,7 @@ app = FastAPI(
 )
 app.include_router(events_router)
 app.include_router(alerts_router)
+app.include_router(dashboard_router)
 
 
 @app.on_event("startup")
@@ -52,5 +54,6 @@ def api_info() -> dict[str, Any]:
             "threat-intel",
             "hunting",
             "reports",
+            "dashboard",
         ],
     }
