@@ -1,4 +1,4 @@
-name: Offline SIEM Tests
+name: SentinelX Backend Tests
 
 on:
   push:
@@ -9,16 +9,23 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: backend:.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            backend/requirements.txt
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt -r backend/requirements.txt
       - run: pytest -q
