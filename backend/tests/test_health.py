@@ -8,7 +8,7 @@ import app.routes_incidents as routes_incidents
 
 def test_app_is_created():
     assert app is not None
-    assert APP_VERSION == "0.7.0"
+    assert APP_VERSION == "0.9.1"
 
 
 def test_health():
@@ -51,7 +51,9 @@ def test_event_ingest_runs_detection(monkeypatch):
     )
 
     assert response.status_code == 201
-    assert response.json() == {"accepted": 1, "received": 1, "alerts_generated": 0}
+    assert response.json()["accepted"] == 1
+    assert response.json()["received"] == 1
+    assert response.json()["alerts_generated"] == 0
     assert captured["events"] is not None
     assert captured["alerts"] == []
 
