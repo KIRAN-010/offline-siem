@@ -9,11 +9,12 @@ from .routes_alerts import router as alerts_router
 from .routes_correlation import router as correlation_router
 from .routes_dashboard import router as dashboard_router
 from .routes_events import router as events_router
+from .routes_hunting import router as hunting_router
 from .routes_incidents import router as incidents_router
 from .routes_investigation import router as investigation_router
 
 
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.8.0"
 
 app = FastAPI(
     title="SentinelX SOC API",
@@ -21,7 +22,6 @@ app = FastAPI(
     version=APP_VERSION,
 )
 
-# Local development frontend origins. Production deployments should override this policy at the edge.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -36,6 +36,7 @@ app.include_router(dashboard_router)
 app.include_router(incidents_router)
 app.include_router(correlation_router)
 app.include_router(investigation_router)
+app.include_router(hunting_router)
 
 
 @app.on_event("startup")
