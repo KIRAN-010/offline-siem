@@ -4,7 +4,9 @@ from typing import Any
 
 from fastapi import APIRouter, Query
 
+from .alert_store import save_alerts
 from .db import get_connection
+from .detection_bridge import detect_events
 from .event_store import save_events
 from .schemas import SecurityEvent
 
@@ -13,7 +15,23 @@ router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
 @router.post("", status_code=201)
 def ingest_events(events: list[SecurityEvent]) -> dict[str, Any]:
-    return {"accepted": save_events(events), "received": len(events)}
+    accepted = save_events(events)
+    detected = []
+    detection_error: str | None = None
+    try:
+        detected = detect_events(events)
+        save_alerts(detected)
+    except Exception as exc:
+        detection_error = str(exc)
+
+    result: dict[str, Any] = {
+        "accepted": accepted,
+        "received": len(events),
+        "alerts_generated": len(detected),
+    }
+    if detection_error:
+        result["detection_error"] = detection_error
+    return result
 
 
 @router.get("")
