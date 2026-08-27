@@ -32,6 +32,21 @@ export type Incident = {
   attack_techniques: Array<{ tactic: string; technique_id: string; technique: string }>;
 };
 
+export type HuntEvent = {
+  id: number;
+  timestamp: string;
+  source: string;
+  host: string | null;
+  username: string | null;
+  source_ip: string | null;
+  destination_ip: string | null;
+  event_id: string | null;
+  process: string | null;
+  command: string | null;
+  severity: string;
+  raw_data: Record<string, unknown>;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -47,4 +62,5 @@ export const api = {
   alerts: (limit = 8) => requestJson<{ count: number; alerts: Alert[] }>(`/api/v1/alerts?limit=${limit}`),
   incidents: (limit = 6) => requestJson<{ count: number; incidents: Incident[] }>(`/api/v1/incidents?limit=${limit}`),
   correlate: () => requestJson<{ created: number; incidents: Incident[] }>("/api/v1/correlation/run", { method: "POST" }),
+  hunt: (query: string) => requestJson<{ count: number; events: HuntEvent[]; summary: Record<string, number> }>(`/api/v1/hunting/search?q=${encodeURIComponent(query)}&limit=50`),
 };
