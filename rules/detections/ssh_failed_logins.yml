@@ -1,0 +1,18 @@
+id: SX-SSH-001
+title: Multiple SSH Authentication Failures
+description: Detect repeated SSH authentication failures from the same source IP.
+severity: high
+enabled: true
+logsource:
+  product: linux
+  service: ssh
+detection:
+  selection:
+    message|contains: "Failed password"
+  condition: selection
+threshold:
+  count: 5
+  timeframe_seconds: 300
+tags:
+  - attack.credential_access
+  - attack.t1110
