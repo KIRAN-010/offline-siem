@@ -6,11 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt ./requirements.txt
 COPY backend/requirements.txt ./backend/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt -r backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-COPY . .
+COPY backend ./backend
+COPY src ./src
+COPY rules ./rules
+COPY config.yaml ./config.yaml
+COPY samples ./samples
 RUN mkdir -p /app/data
 
 EXPOSE 8000
