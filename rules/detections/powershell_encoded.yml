@@ -1,0 +1,18 @@
+id: SX-WIN-001
+title: Suspicious Encoded PowerShell
+description: Detect PowerShell execution using common encoded-command switches.
+severity: high
+enabled: true
+logsource:
+  product: windows
+  service: powershell
+detection:
+  selection:
+    command|contains:
+      - "-EncodedCommand"
+      - "-enc "
+      - " /encodedcommand"
+  condition: selection
+tags:
+  - attack.execution
+  - attack.t1059.001
