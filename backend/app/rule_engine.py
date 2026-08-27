@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,16 @@ def load_rule(path: Path) -> DetectionRule:
     tags = raw.get("tags", [])
     if not isinstance(tags, list):
         raise RuleValidationError(f"Rule {path} tags must be a list")
+    threshold = raw.get("threshold")
+    if threshold is not None and not isinstance(threshold, dict):
+        raise RuleValidationError(f"Rule {path} threshold must be a mapping")
+    if isinstance(threshold, dict):
+        count = threshold.get("count")
+        timeframe = threshold.get("timeframe_seconds")
+        if count is not None and (not isinstance(count, int) or count < 1):
+            raise RuleValidationError(f"Rule {path} threshold count must be a positive integer")
+        if timeframe is not None and (not isinstance(timeframe, int) or timeframe < 1):
+            raise RuleValidationError(f"Rule {path} threshold timeframe_seconds must be a positive integer")
     return DetectionRule(
         id=str(raw["id"]),
         title=str(raw["title"]),
@@ -53,15 +64,13 @@ def load_rule(path: Path) -> DetectionRule:
         tags=tuple(str(tag) for tag in tags),
         enabled=bool(raw.get("enabled", True)),
         logsource=raw.get("logsource") if isinstance(raw.get("logsource"), dict) else None,
-        threshold=raw.get("threshold") if isinstance(raw.get("threshold"), dict) else None,
+        threshold=threshold,
     )
 
 
 def load_rules(directory: Path) -> list[DetectionRule]:
-    rules: list[DetectionRule] = []
-    for path in sorted(directory.rglob("*.yml")) + sorted(directory.rglob("*.yaml")):
-        rules.append(load_rule(path))
-    return [rule for rule in rules if rule.enabled]
+    paths = sorted(set(directory.rglob("*.yml")) | set(directory.rglob("*.yaml")))
+    return [rule for rule in (load_rule(path) for path in paths) if rule.enabled]
 
 
 def event_fields(event: dict[str, Any]) -> dict[str, Any]:
@@ -73,27 +82,18 @@ def event_fields(event: dict[str, Any]) -> dict[str, Any]:
 
 
 def _contains(value: Any, needle: str) -> bool:
-    if value is None:
-        return False
-    return needle.lower() in str(value).lower()
+    return value is not None and needle.lower() in str(value).lower()
 
 
 def _match_field(actual: Any, expected: Any, modifier: str | None) -> bool:
+    expected_values = expected if isinstance(expected, list) else [expected]
     if modifier == "contains":
-        if isinstance(expected, list):
-            return any(_contains(actual, item) for item in expected)
-        return _contains(actual, str(expected))
+        return any(_contains(actual, str(item)) for item in expected_values)
     if modifier == "startswith":
-        if isinstance(expected, list):
-            return any(str(actual).lower().startswith(str(item).lower()) for item in expected)
-        return str(actual).lower().startswith(str(expected).lower())
+        return any(str(actual).lower().startswith(str(item).lower()) for item in expected_values)
     if modifier == "endswith":
-        if isinstance(expected, list):
-            return any(str(actual).lower().endswith(str(item).lower()) for item in expected)
-        return str(actual).lower().endswith(str(expected).lower())
-    if isinstance(expected, list):
-        return any(str(actual).lower() == str(item).lower() for item in expected)
-    return str(actual).lower() == str(expected).lower()
+        return any(str(actual).lower().endswith(str(item).lower()) for item in expected_values)
+    return any(str(actual).lower() == str(item).lower() for item in expected_values)
 
 
 def rule_matches(rule: DetectionRule, event: dict[str, Any]) -> bool:
@@ -105,26 +105,24 @@ def rule_matches(rule: DetectionRule, event: dict[str, Any]) -> bool:
         if not isinstance(selection, dict):
             selections[selection_name] = False
             continue
-        matched = True
-        for key, expected in selection.items():
-            parts = str(key).split("|")
-            field_name = parts[0].lower()
-            modifier = parts[1].lower() if len(parts) > 1 else None
-            if not _match_field(fields.get(field_name), expected, modifier):
-                matched = False
-                break
-        selections[selection_name] = matched
+        selections[selection_name] = all(
+            _match_field(
+                fields.get(str(key).split("|")[0].lower()),
+                expected,
+                str(key).split("|")[1].lower() if "|" in str(key) else None,
+            )
+            for key, expected in selection.items()
+        )
 
-    condition = rule.condition.strip()
-    if condition in selections:
-        return selections[condition]
-    # Minimal safe expression support for Sigma-style `sel1 or sel2` / `sel1 and sel2`.
-    tokens = condition.replace("(", " ").replace(")", " ").split()
+    tokens = rule.condition.replace("(", " ").replace(")", " ").split()
+    if len(tokens) == 1:
+        return selections.get(tokens[0], False)
     if not tokens:
         return False
     result = selections.get(tokens[0], False)
-    index = 1
-    while index + 1 < len(tokens):
+    for index in range(1, len(tokens), 2):
+        if index + 1 >= len(tokens):
+            return False
         operator = tokens[index].lower()
         rhs = selections.get(tokens[index + 1], False)
         if operator == "and":
@@ -133,15 +131,50 @@ def rule_matches(rule: DetectionRule, event: dict[str, Any]) -> bool:
             result = result or rhs
         else:
             return False
-        index += 2
     return bool(result)
+
+
+def _event_time(event: dict[str, Any]) -> datetime | None:
+    value = event.get("timestamp")
+    if isinstance(value, datetime):
+        return value
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _threshold_key(rule: DetectionRule, event: dict[str, Any]) -> tuple[str, str]:
+    fields = event_fields(event)
+    return rule.id, str(fields.get("source_ip") or fields.get("ip") or fields.get("username") or "*")
+
+
+def threshold_matches(rule: DetectionRule, events: list[dict[str, Any]], event: dict[str, Any]) -> bool:
+    if not rule.threshold or "count" not in rule.threshold:
+        return True
+    current_time = _event_time(event)
+    if current_time is None:
+        return False
+    count = int(rule.threshold["count"])
+    timeframe = int(rule.threshold.get("timeframe_seconds", 300))
+    key = _threshold_key(rule, event)
+    matching_events = []
+    for candidate in events:
+        candidate_time = _event_time(candidate)
+        if candidate_time is None or _threshold_key(rule, candidate) != key:
+            continue
+        if abs((current_time - candidate_time).total_seconds()) <= timeframe and rule_matches(rule, candidate):
+            matching_events.append(candidate)
+    return len(matching_events) >= count
 
 
 def detect(events: list[dict[str, Any]], rules: list[DetectionRule]) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
-    for event in events:
-        for rule in rules:
-            if rule_matches(rule, event):
+    for rule in rules:
+        for event in events:
+            if rule_matches(rule, event) and threshold_matches(rule, events, event):
                 matches.append({
                     "rule_id": rule.id,
                     "title": rule.title,
