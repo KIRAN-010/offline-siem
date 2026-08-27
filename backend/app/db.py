@@ -4,9 +4,11 @@ from pathlib import Path
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "sentinelx.db"
 
 
-def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
+def init_db(db_path: Path | None = None) -> None:
+    """Create the local SentinelX database schema when needed."""
+    path = db_path or DEFAULT_DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
         conn.executescript(
             """
@@ -30,13 +32,18 @@ def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
             CREATE INDEX IF NOT EXISTS idx_events_source ON events(source);
             CREATE INDEX IF NOT EXISTS idx_events_source_ip ON events(source_ip);
             CREATE INDEX IF NOT EXISTS idx_events_username ON events(username);
+            CREATE INDEX IF NOT EXISTS idx_events_severity ON events(severity);
             """
         )
 
 
-def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
-    init_db(db_path)
-    conn = sqlite3.connect(db_path)
+def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
+    """Return a configured SQLite connection using the current database path."""
+    path = db_path or DEFAULT_DB_PATH
+    init_db(path)
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
