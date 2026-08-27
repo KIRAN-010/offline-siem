@@ -7,6 +7,10 @@ from .rule_engine import DetectionRule, detect
 from .schemas import SecurityEvent
 
 
+def _event_uid(event: dict[str, Any]) -> str:
+    return str(event.get("event_uid") or event.get("timestamp", ""))
+
+
 def rule_alerts(events: list[SecurityEvent], rules: list[DetectionRule]) -> list[Alert]:
     payloads = [event.model_dump(mode="json") for event in events]
     alerts: list[Alert] = []
@@ -18,7 +22,9 @@ def rule_alerts(events: list[SecurityEvent], rules: list[DetectionRule]) -> list
         for key in ("source_ip", "destination_ip", "username", "host"):
             if event.get(key):
                 indicators[key] = event[key]
-        alert_id = f"{match['rule_id']}:{event.get('event_uid', event.get('timestamp'))}"
+        supporting_events = match.get("supporting_events") or [event]
+        source_logs = [_event_uid(item) for item in supporting_events]
+        alert_id = f"{match['rule_id']}:{source_logs[-1] or event.get('timestamp')}"
         alerts.append(
             Alert(
                 id=alert_id,
@@ -27,11 +33,15 @@ def rule_alerts(events: list[SecurityEvent], rules: list[DetectionRule]) -> list
                 reason=match["title"],
                 description=match["description"],
                 timestamp=timestamp,
-                source_logs=[str(event.get("event_uid", event.get("timestamp", "")))],
+                source_logs=source_logs,
                 indicators=indicators,
                 matched_pattern=match["rule_id"],
                 confidence=1.0,
-                metadata={"rule_id": match["rule_id"], "tags": match["tags"]},
+                metadata={
+                    "rule_id": match["rule_id"],
+                    "tags": match["tags"],
+                    "threshold_count": (match.get("rule_id") and next((r.threshold.get("count") for r in rules if r.id == match["rule_id"] and r.threshold), None)),
+                },
             )
         )
     return alerts
