@@ -34,8 +34,8 @@ export type Incident = {
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
@@ -43,8 +43,8 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const api = {
-  dashboard: () => getJson<DashboardSummary>("/api/v1/dashboard/summary"),
-  alerts: (limit = 8) => getJson<{ count: number; alerts: Alert[] }>(`/api/v1/alerts?limit=${limit}`),
-  incidents: (limit = 6) => getJson<{ count: number; incidents: Incident[] }>(`/api/v1/incidents?limit=${limit}`),
-  correlate: () => getJson<{ created: number; incidents: Incident[] }>("/api/v1/correlation/run",),
+  dashboard: () => requestJson<DashboardSummary>("/api/v1/dashboard/summary"),
+  alerts: (limit = 8) => requestJson<{ count: number; alerts: Alert[] }>(`/api/v1/alerts?limit=${limit}`),
+  incidents: (limit = 6) => requestJson<{ count: number; incidents: Incident[] }>(`/api/v1/incidents?limit=${limit}`),
+  correlate: () => requestJson<{ created: number; incidents: Incident[] }>("/api/v1/correlation/run", { method: "POST" }),
 };
