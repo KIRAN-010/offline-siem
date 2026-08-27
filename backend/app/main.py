@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,12 +16,20 @@ from .routes_investigation import router as investigation_router
 from .routes_rules import router as rules_router
 
 
-APP_VERSION = "0.9.0"
+APP_VERSION = "0.9.1"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="SentinelX SOC API",
     description="Offline-first Security Operations and Detection Platform",
     version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -39,12 +48,6 @@ app.include_router(correlation_router)
 app.include_router(investigation_router)
 app.include_router(hunting_router)
 app.include_router(rules_router)
-
-
-@app.on_event("startup")
-def startup() -> None:
-    """Ensure the local database schema exists before serving requests."""
-    init_db()
 
 
 def utc_now() -> str:
