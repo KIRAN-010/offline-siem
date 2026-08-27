@@ -1,51 +1,54 @@
 from datetime import datetime, timezone
 from typing import Any
 
-try:
-    from fastapi import FastAPI
-    from .routes_events import router as events_router
-except ImportError:  # Keeps this module importable before dependencies are installed.
-    FastAPI = None
-    events_router = None
+from fastapi import FastAPI
+
+from .db import init_db
+from .routes_events import router as events_router
 
 
 APP_VERSION = "0.2.0"
+
+app = FastAPI(
+    title="SentinelX SOC API",
+    description="Offline-first Security Operations and Detection Platform",
+    version=APP_VERSION,
+)
+app.include_router(events_router)
+
+
+@app.on_event("startup")
+def startup() -> None:
+    """Ensure the local database schema exists before serving requests."""
+    init_db()
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-if FastAPI:
-    app = FastAPI(
-        title="SentinelX SOC API",
-        description="Offline-first Security Operations and Detection Platform",
-        version=APP_VERSION,
-    )
-    app.include_router(events_router)
+@app.get("/health")
+def health() -> dict[str, Any]:
+    return {"status": "ok", "service": "sentinelx-api", "version": APP_VERSION}
 
-    @app.get("/health")
-    def health() -> dict[str, Any]:
-        return {"status": "ok", "service": "sentinelx-api", "version": APP_VERSION}
 
-    @app.get("/ready")
-    def readiness() -> dict[str, Any]:
-        return {"status": "ready", "timestamp": utc_now()}
+@app.get("/ready")
+def readiness() -> dict[str, Any]:
+    return {"status": "ready", "timestamp": utc_now()}
 
-    @app.get("/api/v1")
-    def api_info() -> dict[str, Any]:
-        return {
-            "name": "SentinelX",
-            "version": APP_VERSION,
-            "modules": [
-                "events",
-                "detections",
-                "alerts",
-                "incidents",
-                "threat-intel",
-                "hunting",
-                "reports",
-            ],
-        }
-else:
-    app = None
+
+@app.get("/api/v1")
+def api_info() -> dict[str, Any]:
+    return {
+        "name": "SentinelX",
+        "version": APP_VERSION,
+        "modules": [
+            "events",
+            "detections",
+            "alerts",
+            "incidents",
+            "threat-intel",
+            "hunting",
+            "reports",
+        ],
+    }
