@@ -4,8 +4,15 @@ from pathlib import Path
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "sentinelx.db"
 
 
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+
+
 def init_db(db_path: Path | None = None) -> None:
-    """Create the local SentinelX database schema when needed."""
+    """Create and migrate the local SentinelX database schema."""
     path = db_path or DEFAULT_DB_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
@@ -66,6 +73,9 @@ def init_db(db_path: Path | None = None) -> None:
                 alert_uids TEXT NOT NULL DEFAULT '[]',
                 indicators TEXT NOT NULL DEFAULT '{}',
                 summary TEXT NOT NULL DEFAULT '',
+                risk_score INTEGER NOT NULL DEFAULT 0,
+                risk_level TEXT NOT NULL DEFAULT 'LOW',
+                attack_techniques TEXT NOT NULL DEFAULT '[]',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -74,6 +84,11 @@ def init_db(db_path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_incidents_created ON incidents(created_at);
             """
         )
+        _ensure_columns(conn, "incidents", {
+            "risk_score": "INTEGER NOT NULL DEFAULT 0",
+            "risk_level": "TEXT NOT NULL DEFAULT 'LOW'",
+            "attack_techniques": "TEXT NOT NULL DEFAULT '[]'",
+        })
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
