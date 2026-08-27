@@ -3,11 +3,13 @@ from typing import Any
 
 try:
     from fastapi import FastAPI
+    from .routes_events import router as events_router
 except ImportError:  # Keeps this module importable before dependencies are installed.
     FastAPI = None
+    events_router = None
 
 
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 
 def utc_now() -> str:
@@ -20,6 +22,7 @@ if FastAPI:
         description="Offline-first Security Operations and Detection Platform",
         version=APP_VERSION,
     )
+    app.include_router(events_router)
 
     @app.get("/health")
     def health() -> dict[str, Any]:
