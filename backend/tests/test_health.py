@@ -8,7 +8,7 @@ import app.routes_incidents as routes_incidents
 
 def test_app_is_created():
     assert app is not None
-    assert APP_VERSION == "0.5.0"
+    assert APP_VERSION == "0.7.0"
 
 
 def test_health():
