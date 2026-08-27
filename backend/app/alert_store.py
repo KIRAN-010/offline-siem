@@ -1,9 +1,9 @@
 import json
-from typing import Iterable, Any
+from typing import Any, Iterable
 
 from src.detection.alert import Alert
 
-from .db import DEFAULT_DB_PATH, get_connection
+from .db import get_connection
 
 
 def save_alerts(alerts: Iterable[Alert], db_path=None) -> int:
@@ -64,3 +64,15 @@ def list_alerts(
         row["indicators"] = json.loads(row["indicators"])
         row["metadata"] = json.loads(row["metadata"])
     return rows
+
+
+def update_alert_status(alert_uid: str, status: str, db_path=None) -> bool:
+    allowed = {"new", "acknowledged", "resolved", "false_positive"}
+    if status not in allowed:
+        raise ValueError(f"Unsupported alert status: {status}")
+    with get_connection(db_path) as conn:
+        cursor = conn.execute(
+            "UPDATE alerts SET status = ? WHERE alert_uid = ?",
+            (status, alert_uid),
+        )
+        return cursor.rowcount == 1
