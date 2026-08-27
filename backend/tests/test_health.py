@@ -3,11 +3,12 @@ from fastapi.testclient import TestClient
 from app.main import APP_VERSION, app
 import app.routes_events as routes_events
 import app.routes_alerts as routes_alerts
+import app.routes_incidents as routes_incidents
 
 
 def test_app_is_created():
     assert app is not None
-    assert APP_VERSION == "0.4.0"
+    assert APP_VERSION == "0.5.0"
 
 
 def test_health():
@@ -114,3 +115,21 @@ def test_dashboard_summary(monkeypatch):
     assert response.status_code == 200
     assert response.json()["events"] == 0
     assert response.json()["alerts"] == 0
+
+
+def test_incident_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        routes_incidents,
+        "create_incident",
+        lambda **kwargs: {"incident_uid": "INC-TEST", "severity": "HIGH", "title": kwargs["title"]},
+    )
+    response = TestClient(app).post(
+        "/api/v1/incidents",
+        json={
+            "title": "Suspicious authentication activity",
+            "alert_uids": ["ALERT-1", "ALERT-2"],
+            "summary": "Related authentication detections",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["incident_uid"] == "INC-TEST"
