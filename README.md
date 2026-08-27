@@ -1,6 +1,6 @@
 # SentinelX — Offline Security Operations & Detection Platform
 
-SentinelX is an offline-first Security Operations platform for collecting, normalizing, detecting and investigating security activity in restricted or air-gapped environments. It combines the repository's SIEM engine with a FastAPI service for event ingestion, alert triage, dashboard telemetry and incident case management.
+SentinelX is an offline-first Security Operations platform for collecting, normalizing, detecting and investigating security activity in restricted or air-gapped environments. It combines the repository's SIEM engine with a FastAPI service and React/TypeScript analyst console.
 
 ## Architecture
 
@@ -36,7 +36,7 @@ Logs / Endpoints / Network
     Timeline   ATT&CK   Reports
        |
        v
-     SOC UI / API / Hunting
+  React Console / API / Hunting
 ```
 
 ## Current capabilities
@@ -52,17 +52,40 @@ Logs / Endpoints / Network
 - FastAPI event ingestion and search
 - Alert filtering and analyst triage lifecycle
 - SOC dashboard summary metrics
-- Incident/case creation from related alert identifiers
-- Streamlit SOC dashboard
+- Alert correlation with shared identity/network indicators
+- Explainable 0-100 incident risk scoring
+- Basic MITRE ATT&CK technique mapping
+- Investigation timeline API
+- React + TypeScript analyst console
+- Docker Compose deployment
+- Streamlit SOC dashboard and legacy-compatible workflow
 - HTML/TXT investigation reports
-- Automated regression tests with GitHub Actions
+- Automated backend and frontend CI validation
 
 ## Quick start
 
-### Requirements
+### Option 1 — Docker Compose
+
+Build and run the complete local stack:
+
+```bash
+docker compose up --build
+```
+
+Open the analyst console at `http://127.0.0.1:8080`.
+
+The FastAPI service is available at `http://127.0.0.1:8000` and Swagger documentation at `http://127.0.0.1:8000/docs`.
+
+The SQLite database is stored in the persistent `sentinelx_data` Docker volume.
+
+### Option 2 — Local development
+
+Requirements:
 
 - Python 3.10+
-- Windows, Linux or macOS
+- Node.js 22+
+
+Backend:
 
 ```bash
 python -m venv .venv
@@ -73,20 +96,28 @@ source .venv/bin/activate
 # Windows
 .venv\\Scripts\\activate
 
+pip install -r requirements.txt -r backend/requirements.txt
+uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+Frontend, in a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite development server uses the configured proxy to forward `/api`, `/health` and `/ready` requests to FastAPI.
+
+### Legacy Streamlit interface
+
+```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### API service
-
-```bash
-pip install -r backend/requirements.txt
-uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-```
-
-Swagger documentation is available at `http://127.0.0.1:8000/docs` while the API is running.
-
-### API endpoints
+## API endpoints
 
 - `GET /health`
 - `GET /ready`
@@ -98,6 +129,11 @@ Swagger documentation is available at `http://127.0.0.1:8000/docs` while the API
 - `GET /api/v1/dashboard/summary`
 - `POST /api/v1/incidents`
 - `GET /api/v1/incidents`
+- `GET /api/v1/incidents/{incident_uid}`
+- `PATCH /api/v1/incidents/{incident_uid}/status`
+- `GET /api/v1/correlation/preview`
+- `POST /api/v1/correlation/run`
+- `GET /api/v1/investigation/{incident_uid}/timeline`
 
 ## Detection engine
 
@@ -118,9 +154,10 @@ The existing detection engine remains the source of truth for detection logic; t
 3. Run the existing detection suite.
 4. Persist generated alerts.
 5. Triage alerts using status changes.
-6. Group related alerts into an incident case.
-7. Investigate evidence and timeline activity.
-8. Generate a report.
+6. Correlate related alerts.
+7. Assign risk and ATT&CK context to the incident.
+8. Investigate the timeline and supporting evidence.
+9. Generate a report.
 
 ## Security design
 
@@ -129,16 +166,23 @@ The existing detection engine remains the source of truth for detection logic; t
 - Uploaded content is size-limited in the Streamlit UI.
 - API queries use parameterized SQLite statements.
 - Raw event content is retained for investigation traceability.
-- Incident and alert data are stored locally for restricted environments.
+- Browser/API CORS is restricted to local development origins and does not allow credentials.
+- The container stack keeps persistent application data in a named volume.
 
 ## Testing
+
+Backend and frontend are validated independently:
 
 ```bash
 pip install -r requirements.txt -r backend/requirements.txt
 pytest -q
+
+cd frontend
+npm install
+npm run build
 ```
 
-GitHub Actions runs the regression suite for pushes to `main`/`stabilize-and-harden` and pull requests targeting `main`.
+GitHub Actions runs both suites on pushes to `main`/`stabilize-and-harden` and pull requests targeting `main`.
 
 ## Project structure
 
@@ -147,7 +191,13 @@ offline-siem/
 ├── app.py
 ├── backend/
 │   ├── app/
-│   └── tests/
+│   ├── tests/
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── docker-compose.yml
 ├── config.yaml
 ├── docs/
 ├── requirements.txt
@@ -166,7 +216,7 @@ offline-siem/
 
 ## Roadmap
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the implementation milestones. The next major feature is automated alert correlation/risk scoring followed by threat hunting and a full analyst dashboard.
+See [`docs/ROADMAP.md`](docs/ROADMAP.md). The next major feature set is advanced threat hunting, richer ATT&CK coverage, evidence management, report generation through the API, and end-to-end attack simulation datasets.
 
 ## License
 
