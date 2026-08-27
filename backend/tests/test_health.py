@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.main import APP_VERSION, app
 import app.routes_events as routes_events
+import app.routes_alerts as routes_alerts
 
 
 def test_app_is_created():
@@ -56,7 +57,8 @@ def test_event_ingest_runs_detection(monkeypatch):
 
 def test_alert_endpoint(monkeypatch):
     monkeypatch.setattr(
-        "app.routes_alerts.list_alerts",
+        routes_alerts,
+        "list_alerts",
         lambda **kwargs: [{"alert_uid": "TEST-1", "severity": "HIGH"}],
     )
     response = TestClient(app).get("/api/v1/alerts", params={"severity": "HIGH"})
@@ -65,6 +67,28 @@ def test_alert_endpoint(monkeypatch):
         "count": 1,
         "alerts": [{"alert_uid": "TEST-1", "severity": "HIGH"}],
     }
+
+
+def test_alert_status_update(monkeypatch):
+    monkeypatch.setattr(routes_alerts, "update_alert_status", lambda alert_uid, status: status == "acknowledged")
+    response = TestClient(app).patch(
+        "/api/v1/alerts/TEST-1/status",
+        json={"status": "acknowledged"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"alert_uid": "TEST-1", "status": "acknowledged"}
+
+
+def test_alert_status_rejects_invalid_value(monkeypatch):
+    def reject(alert_uid, status):
+        raise ValueError("Unsupported alert status: nope")
+
+    monkeypatch.setattr(routes_alerts, "update_alert_status", reject)
+    response = TestClient(app).patch(
+        "/api/v1/alerts/TEST-1/status",
+        json={"status": "nope"},
+    )
+    assert response.status_code == 400
 
 
 def test_dashboard_summary(monkeypatch):
@@ -77,16 +101,13 @@ def test_dashboard_summary(monkeypatch):
 
         def execute(self, query):
             class Row:
-                def __init__(self, value):
-                    self.value = value
-
                 def fetchone(self):
-                    return (self.value,)
+                    return (0,)
 
                 def fetchall(self):
                     return []
 
-            return Row(0)
+            return Row()
 
     monkeypatch.setattr("app.routes_dashboard.get_connection", lambda: FakeConnection())
     response = TestClient(app).get("/api/v1/dashboard/summary")
