@@ -6,7 +6,7 @@ import app.routes_events as routes_events
 
 def test_app_is_created():
     assert app is not None
-    assert APP_VERSION == "0.3.0"
+    assert APP_VERSION == "0.4.0"
 
 
 def test_health():
@@ -65,3 +65,31 @@ def test_alert_endpoint(monkeypatch):
         "count": 1,
         "alerts": [{"alert_uid": "TEST-1", "severity": "HIGH"}],
     }
+
+
+def test_dashboard_summary(monkeypatch):
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, query):
+            class Row:
+                def __init__(self, value):
+                    self.value = value
+
+                def fetchone(self):
+                    return (self.value,)
+
+                def fetchall(self):
+                    return []
+
+            return Row(0)
+
+    monkeypatch.setattr("app.routes_dashboard.get_connection", lambda: FakeConnection())
+    response = TestClient(app).get("/api/v1/dashboard/summary")
+    assert response.status_code == 200
+    assert response.json()["events"] == 0
+    assert response.json()["alerts"] == 0
