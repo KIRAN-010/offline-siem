@@ -12,9 +12,10 @@ from .routes_events import router as events_router
 from .routes_hunting import router as hunting_router
 from .routes_incidents import router as incidents_router
 from .routes_investigation import router as investigation_router
+from .routes_rules import router as rules_router
 
 
-APP_VERSION = "0.8.0"
+APP_VERSION = "0.9.0"
 
 app = FastAPI(
     title="SentinelX SOC API",
@@ -37,6 +38,7 @@ app.include_router(incidents_router)
 app.include_router(correlation_router)
 app.include_router(investigation_router)
 app.include_router(hunting_router)
+app.include_router(rules_router)
 
 
 @app.on_event("startup")
@@ -67,6 +69,7 @@ def api_info() -> dict[str, Any]:
         "modules": [
             "events",
             "detections",
+            "rules",
             "alerts",
             "correlation",
             "risk",
