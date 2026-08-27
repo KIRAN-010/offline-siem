@@ -8,29 +8,40 @@ from .alert_store import save_alerts
 from .db import get_connection
 from .detection_bridge import detect_events
 from .event_store import save_events
+from .rule_alerts import rule_alerts
+from .rule_engine import load_rules
 from .schemas import SecurityEvent
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
+RULES_DIR = __import__("pathlib").Path(__file__).resolve().parents[2] / "rules" / "detections"
 
 
 @router.post("", status_code=201)
 def ingest_events(events: list[SecurityEvent]) -> dict[str, Any]:
     accepted = save_events(events)
     detected = []
-    detection_error: str | None = None
+    detection_errors: list[str] = []
     try:
-        detected = detect_events(events)
+        detected.extend(detect_events(events))
+    except Exception as exc:
+        detection_errors.append(f"built-in:{exc}")
+    try:
+        detected.extend(rule_alerts(events, load_rules(RULES_DIR)))
+    except Exception as exc:
+        detection_errors.append(f"rules:{exc}")
+
+    try:
         save_alerts(detected)
     except Exception as exc:
-        detection_error = str(exc)
+        detection_errors.append(f"alert_store:{exc}")
 
     result: dict[str, Any] = {
         "accepted": accepted,
         "received": len(events),
         "alerts_generated": len(detected),
     }
-    if detection_error:
-        result["detection_error"] = detection_error
+    if detection_errors:
+        result["detection_errors"] = detection_errors
     return result
 
 
