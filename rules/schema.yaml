@@ -1,0 +1,37 @@
+title: SentinelX Detection Rule Schema
+version: 1
+required:
+  - id
+  - title
+  - severity
+  - detection
+properties:
+  id:
+    type: string
+  title:
+    type: string
+  description:
+    type: string
+  severity:
+    enum: [low, medium, high, critical]
+  enabled:
+    type: boolean
+  logsource:
+    type: object
+    properties:
+      product: {type: string}
+      service: {type: string}
+      category: {type: string}
+  detection:
+    type: object
+    additionalProperties: true
+  condition:
+    type: string
+  threshold:
+    type: object
+    properties:
+      count: {type: integer, minimum: 1}
+      timeframe_seconds: {type: integer, minimum: 1}
+  tags:
+    type: array
+    items: {type: string}
