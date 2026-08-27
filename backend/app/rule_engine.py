@@ -165,22 +165,56 @@ def threshold_matches(rule: DetectionRule, events: list[dict[str, Any]], event: 
         candidate_time = _event_time(candidate)
         if candidate_time is None or _threshold_key(rule, candidate) != key:
             continue
-        if abs((current_time - candidate_time).total_seconds()) <= timeframe and rule_matches(rule, candidate):
+        if 0 <= (current_time - candidate_time).total_seconds() <= timeframe and rule_matches(rule, candidate):
             matching_events.append(candidate)
     return len(matching_events) >= count
+
+
+def _supporting_events(rule: DetectionRule, events: list[dict[str, Any]], event: dict[str, Any]) -> list[dict[str, Any]]:
+    if not rule.threshold or "count" not in rule.threshold:
+        return [event]
+    current_time = _event_time(event)
+    if current_time is None:
+        return [event]
+    timeframe = int(rule.threshold.get("timeframe_seconds", 300))
+    key = _threshold_key(rule, event)
+    return [
+        candidate
+        for candidate in events
+        if _threshold_key(rule, candidate) == key
+        and _event_time(candidate) is not None
+        and 0 <= (current_time - _event_time(candidate)).total_seconds() <= timeframe
+        and rule_matches(rule, candidate)
+    ]
 
 
 def detect(events: list[dict[str, Any]], rules: list[DetectionRule]) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     for rule in rules:
-        for event in events:
-            if rule_matches(rule, event) and threshold_matches(rule, events, event):
-                matches.append({
-                    "rule_id": rule.id,
-                    "title": rule.title,
-                    "severity": rule.severity,
-                    "description": rule.description,
-                    "tags": list(rule.tags),
-                    "event": event,
-                })
+        ordered_events = sorted(events, key=lambda item: _event_time(item) or datetime.min)
+        emitted_at: dict[tuple[str, str], datetime] = {}
+        for event in ordered_events:
+            if not rule_matches(rule, event):
+                continue
+            current_time = _event_time(event)
+            key = _threshold_key(rule, event)
+            if rule.threshold and "count" in rule.threshold:
+                if current_time is None or not threshold_matches(rule, ordered_events, event):
+                    continue
+                timeframe = int(rule.threshold.get("timeframe_seconds", 300))
+                previous = emitted_at.get(key)
+                if previous is not None and (current_time - previous).total_seconds() <= timeframe:
+                    continue
+                emitted_at[key] = current_time
+
+            supporting = _supporting_events(rule, ordered_events, event)
+            matches.append({
+                "rule_id": rule.id,
+                "title": rule.title,
+                "severity": rule.severity,
+                "description": rule.description,
+                "tags": list(rule.tags),
+                "event": event,
+                "supporting_events": supporting,
+            })
     return matches
