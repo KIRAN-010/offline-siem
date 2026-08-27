@@ -26,6 +26,7 @@ Log files → Parser/Normalization → Detection Engine → Alerts → Investiga
 - SHA-256 integrity verification and HMAC support
 - Salted PBKDF2-HMAC-SHA256 password protection
 - Streamlit SOC dashboard
+- FastAPI event ingestion/search service
 - Automated regression tests with GitHub Actions
 
 ## Quick start
@@ -49,6 +50,25 @@ streamlit run app.py
 ```
 
 Open the local Streamlit URL shown in the terminal.
+
+### Optional API service
+
+The FastAPI service stores normalized security events in a local SQLite database and exposes health, readiness, ingestion and search endpoints.
+
+```bash
+pip install -r backend/requirements.txt
+uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+Useful endpoints:
+
+- `GET /health`
+- `GET /ready`
+- `GET /api/v1`
+- `POST /api/v1/events`
+- `GET /api/v1/events`
+
+Swagger documentation is available at `http://127.0.0.1:8000/docs` while the API is running.
 
 ## Dashboard workflow
 
@@ -84,10 +104,13 @@ The sample threat-intelligence file supports the repository's structured `suspic
 - Uploaded content is size-limited and decoded once before parsing.
 - Detection alert IDs are deterministic where appropriate to improve deduplication.
 - Raw log lines are retained for investigation traceability.
+- The API uses parameterized SQLite queries and deterministic event IDs for local deduplication.
 
 ## Tests
 
 ```bash
+# Full regression suite, including the API tests
+pip install -r requirements.txt -r backend/requirements.txt
 pytest -q
 ```
 
@@ -98,6 +121,9 @@ GitHub Actions runs the regression suite on pushes to `main`/`stabilize-and-hard
 ```text
 offline-siem/
 ├── app.py
+├── backend/
+│   ├── app/
+│   └── tests/
 ├── config.yaml
 ├── requirements.txt
 ├── samples/
