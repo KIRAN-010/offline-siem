@@ -9,23 +9,34 @@ from app.schemas import SecurityEvent
 RULES_DIR = Path(__file__).resolve().parents[2] / "rules" / "detections"
 
 
-def test_ssh_threshold_generates_custom_alerts():
-    rule = load_rule(RULES_DIR / "ssh_failed_logins.yml")
-    base = datetime(2026, 8, 27, 10, 0, tzinfo=timezone.utc)
-    events = [
+def _events(count: int) -> list[SecurityEvent]:
+    rule_time = datetime(2026, 8, 27, 10, 0, tzinfo=timezone.utc)
+    return [
         SecurityEvent(
-            timestamp=base + timedelta(seconds=i),
+            timestamp=rule_time + timedelta(seconds=i),
             source="sshd",
+            username="analyst",
             source_ip="192.0.2.10",
             severity="high",
             raw_data={"message": "Failed password for analyst"},
         )
-        for i in range(5)
+        for i in range(count)
     ]
-    alerts = rule_alerts(events, [rule])
-    assert len(alerts) == 5
-    assert all(alert.alert_type.value == "CUSTOM" for alert in alerts)
-    assert all(alert.metadata["rule_id"] == "SX-SSH-001" for alert in alerts)
+
+
+def test_ssh_threshold_generates_one_custom_alert_with_evidence():
+    rule = load_rule(RULES_DIR / "ssh_failed_logins.yml")
+    alerts = rule_alerts(_events(5), [rule])
+    assert len(alerts) == 1
+    assert alerts[0].alert_type.value == "CUSTOM"
+    assert alerts[0].metadata["rule_id"] == "SX-SSH-001"
+    assert len(alerts[0].source_logs) == 5
+
+
+def test_ssh_threshold_does_not_alert_before_count():
+    rule = load_rule(RULES_DIR / "ssh_failed_logins.yml")
+    alerts = rule_alerts(_events(4), [rule])
+    assert alerts == []
 
 
 def test_disabled_rules_are_not_loaded():
