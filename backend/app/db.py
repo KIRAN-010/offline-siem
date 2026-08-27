@@ -33,6 +33,27 @@ def init_db(db_path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_events_source_ip ON events(source_ip);
             CREATE INDEX IF NOT EXISTS idx_events_username ON events(username);
             CREATE INDEX IF NOT EXISTS idx_events_severity ON events(severity);
+
+            CREATE TABLE IF NOT EXISTS alerts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                alert_uid TEXT NOT NULL UNIQUE,
+                alert_type TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                timestamp TEXT NOT NULL,
+                source_logs TEXT NOT NULL DEFAULT '[]',
+                indicators TEXT NOT NULL DEFAULT '{}',
+                matched_pattern TEXT NOT NULL DEFAULT '',
+                confidence REAL NOT NULL DEFAULT 1.0,
+                metadata TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'new',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
+            CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
+            CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);
             """
         )
 
