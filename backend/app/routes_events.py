@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -13,7 +14,7 @@ from .rule_engine import load_rules
 from .schemas import SecurityEvent
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
-RULES_DIR = __import__("pathlib").Path(__file__).resolve().parents[2] / "rules" / "detections"
+RULES_DIR = Path(__file__).resolve().parents[2] / "rules" / "detections"
 
 
 @router.post("", status_code=201)
