@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { api, type Alert, type DashboardSummary, type Incident } from "./api";
 
 const emptySummary: DashboardSummary = {
@@ -67,8 +67,7 @@ function App() {
           <a className="active" href="#overview">Overview</a>
           <a href="#alerts">Alerts</a>
           <a href="#incidents">Incidents</a>
-          <a href="#hunting">Threat Hunting</a>
-          <a href="#attack">ATT&CK</a>
+          <a href="#attack">ATT&amp;CK</a>
         </nav>
         <div className="sidebar-foot"><span className="dot" /> Offline-first core</div>
       </aside>
@@ -112,8 +111,8 @@ function App() {
         </section>
 
         <section id="attack" className="panel">
-          <div className="panel-head"><div><h2>MITRE ATT&CK context</h2><p>Technique mappings exposed by correlated cases</p></div></div>
-          <div className="attack-strip">{incidents.flatMap((incident) => incident.attack_techniques).slice(0, 8).map((technique) => <div className="attack-item" key={`${technique.technique_id}-${technique.tactic}`}><strong>{technique.technique_id}</strong><span>{technique.technique}</span><small>{technique.tactic}</small></div>)}{incidents.length === 0 && <Empty text="No ATT&CK mappings yet" />}</div>
+          <div className="panel-head"><div><h2>MITRE ATT&amp;CK context</h2><p>Technique mappings exposed by correlated cases</p></div></div>
+          <div className="attack-strip">{incidents.flatMap((incident) => incident.attack_techniques).slice(0, 8).map((technique) => <div className="attack-item" key={`${technique.technique_id}-${technique.tactic}`}><strong>{technique.technique_id}</strong><span>{technique.technique}</span><small>{technique.tactic}</small></div>)}{incidents.length === 0 && <Empty text="No ATT&amp;CK mappings yet" />}</div>
         </section>
       </main>
     </div>
@@ -124,7 +123,7 @@ function Metric({ label, value, detail }: { label: string; value: number; detail
   return <div className="metric"><span>{label}</span><strong>{value.toLocaleString()}</strong><small>{detail}</small></div>;
 }
 
-function Panel({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+function Panel({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return <section className="panel"><div className="panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div></div>{children}</section>;
 }
 
