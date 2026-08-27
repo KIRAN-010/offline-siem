@@ -10,6 +10,8 @@ def init_db(db_path: Path | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA busy_timeout = 5000")
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS events (
@@ -54,6 +56,22 @@ def init_db(db_path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
             CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
             CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);
+
+            CREATE TABLE IF NOT EXISTS incidents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incident_uid TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                alert_uids TEXT NOT NULL DEFAULT '[]',
+                indicators TEXT NOT NULL DEFAULT '{}',
+                summary TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
+            CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
+            CREATE INDEX IF NOT EXISTS idx_incidents_created ON incidents(created_at);
             """
         )
 
@@ -65,6 +83,5 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA busy_timeout = 5000")
     return conn
