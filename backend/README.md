@@ -1,21 +1,22 @@
 # SentinelX Backend
 
-FastAPI service for the SentinelX SOC platform.
-
-## Run locally
+Run these commands from the repository root, so the shared detection package and configuration are available:
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m pip install -r requirements.txt -r backend/requirements.txt
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-API endpoints currently available:
+Interactive endpoint documentation is available at http://127.0.0.1:8000/docs.
 
-- `GET /health` — liveness check
-- `GET /ready` — readiness check
-- `GET /api/v1` — service/module information
+The service supports event ingestion/search, offline file imports, detections, rules, alert triage, incident correlation/status, timelines, analyst notes, evidence links, JSON/HTML/text reports and saved searches. SQLite persists analyst work locally.
 
-Interactive API documentation is available from FastAPI at `/docs` when the development server is running.
+`GET /health` checks liveness; `GET /ready` also checks database access.
+
+Run the complete Python suite from the repository root:
+
+```bash
+python -m pytest -q
+```
+
+This is a local analyst tool without API authentication. Keep it on loopback or behind your own authenticated gateway.

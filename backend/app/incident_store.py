@@ -45,6 +45,8 @@ def create_incident(
             row = dict(existing)
         else:
             alerts = _get_alerts(conn, alert_uids)
+            if len(alerts) != len(set(alert_uids)):
+                raise ValueError('Every alert UID must reference an existing alert')
             severity = max(
                 (alert["severity"] for alert in alerts),
                 key=_severity_rank,
@@ -78,6 +80,17 @@ def create_incident(
     row["alert_uids"] = json.loads(row["alert_uids"])
     row["indicators"] = json.loads(row["indicators"])
     row["attack_techniques"] = json.loads(row.get("attack_techniques", "[]"))
+    return row
+
+
+def get_incident(incident_uid: str, db_path=None) -> dict[str, Any] | None:
+    with get_connection(db_path) as conn:
+        found = conn.execute('SELECT * FROM incidents WHERE incident_uid = ?', (incident_uid,)).fetchone()
+    if found is None:
+        return None
+    row = dict(found)
+    for field in ('alert_uids', 'indicators', 'attack_techniques'):
+        row[field] = json.loads(row[field])
     return row
 
 

@@ -52,3 +52,38 @@ def test_detection_engine_runs_multiple_detectors():
     assert AlertType.BRUTE_FORCE in types
     assert AlertType.SUSPICIOUS_KEYWORD in types
     assert AlertType.SUSPICIOUS_IP in types
+
+
+def test_streaming_csv_keeps_header_and_multiline_values(tmp_path):
+    from src.ingestion import LogIngestor
+    path = tmp_path / 'logs.csv'
+    path.write_text('timestamp,level,message\n2026-10-11T10:00:00Z,INFO,"first\nsecond"\n')
+    logs = list(LogIngestor().ingest_file_streaming(path))
+    assert len(logs) == 1
+    assert logs[0].message == 'first\nsecond'
+
+
+def test_streaming_json_document(tmp_path):
+    import json
+    from src.ingestion import LogIngestor
+    path = tmp_path / 'logs.json'
+    path.write_text(json.dumps([{'message': 'one'}, {'message': 'two'}], indent=2))
+    assert [log.message for log in LogIngestor().ingest_file_streaming(path)] == ['one', 'two']
+
+
+def test_incremental_ingestion_returns_iterator_and_offset(tmp_path):
+    from src.ingestion import LogIngestor
+    path = tmp_path / 'test.log'
+    path.write_text('one\npartial')
+    ingestor = LogIngestor()
+    events, offset = ingestor.ingest_incremental(path, format='text')
+    assert [log.message for log in events] == ['one']
+    assert offset == 4
+    with path.open('a') as handle:
+        handle.write(' completed\n')
+    events, next_offset = ingestor.ingest_incremental(path, offset, format='text')
+    assert [log.message for log in events] == ['partial completed']
+    assert next_offset == path.stat().st_size
+    path.write_text('new\n')
+    events, _ = ingestor.ingest_incremental(path, next_offset, format='text')
+    assert [log.message for log in events] == ['new']

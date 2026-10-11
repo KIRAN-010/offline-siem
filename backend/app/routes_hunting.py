@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -21,9 +22,9 @@ def hunt(
     params: list[Any] = []
 
     if q:
-        clauses.append("(message LIKE ? OR raw_data LIKE ? OR process LIKE ? OR command LIKE ?)")
+        clauses.append("(raw_data LIKE ? OR process LIKE ? OR command LIKE ? OR source_ip LIKE ? OR username LIKE ? OR host LIKE ?)")
         term = f"%{q}%"
-        params.extend([term, term, term, term])
+        params.extend([term] * 6)
     for column, value in (
         ("source", source),
         ("username", username),
@@ -50,6 +51,8 @@ def hunt(
             params[:-1],
         ).fetchall()
 
+    for row in rows:
+        row['raw_data'] = json.loads(row['raw_data'])
     return {
         "count": len(rows),
         "events": rows,

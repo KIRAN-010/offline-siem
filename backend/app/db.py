@@ -4,6 +4,14 @@ from pathlib import Path
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "sentinelx.db"
 
 
+class ManagedConnection(sqlite3.Connection):
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
 def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
     existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     for name, definition in columns.items():
@@ -82,6 +90,25 @@ def init_db(db_path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
             CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
             CREATE INDEX IF NOT EXISTS idx_incidents_created ON incidents(created_at);
+
+            CREATE TABLE IF NOT EXISTS case_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incident_uid TEXT NOT NULL REFERENCES incidents(incident_uid),
+                text TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS case_evidence (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incident_uid TEXT NOT NULL REFERENCES incidents(incident_uid),
+                event_uid TEXT NOT NULL REFERENCES events(event_uid),
+                UNIQUE(incident_uid, event_uid)
+            );
+            CREATE TABLE IF NOT EXISTS saved_searches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                query TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
         _ensure_columns(conn, "incidents", {
@@ -95,7 +122,7 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     """Return a configured SQLite connection using the current database path."""
     path = db_path or DEFAULT_DB_PATH
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, factory=ManagedConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA busy_timeout = 5000")

@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import init_db
+from .db import init_db, get_connection
 from .routes_alerts import router as alerts_router
 from .routes_correlation import router as correlation_router
 from .routes_dashboard import router as dashboard_router
@@ -14,6 +14,7 @@ from .routes_hunting import router as hunting_router
 from .routes_incidents import router as incidents_router
 from .routes_investigation import router as investigation_router
 from .routes_rules import router as rules_router
+from .routes_operations import router as operations_router
 
 
 APP_VERSION = "0.9.1"
@@ -48,6 +49,7 @@ app.include_router(correlation_router)
 app.include_router(investigation_router)
 app.include_router(hunting_router)
 app.include_router(rules_router)
+app.include_router(operations_router)
 
 
 def utc_now() -> str:
@@ -61,6 +63,8 @@ def health() -> dict[str, Any]:
 
 @app.get("/ready")
 def readiness() -> dict[str, Any]:
+    with get_connection() as conn:
+        conn.execute('SELECT 1 FROM events LIMIT 1').fetchone()
     return {"status": "ready", "timestamp": utc_now()}
 
 
