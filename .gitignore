@@ -22,3 +22,11 @@ reports/
 Thumbs.db
 .vscode/
 .idea/
+
+# Frontend build artifacts
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+test-results/
+playwright-report/
+data/*.db-*

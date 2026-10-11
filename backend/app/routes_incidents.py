@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .incident_store import create_incident, list_incidents
+from .incident_store import create_incident, list_incidents, get_incident as find_incident
 from .db import get_connection
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
@@ -22,12 +22,15 @@ class IncidentStatusUpdate(BaseModel):
 
 @router.post("", status_code=201)
 def create_case(payload: IncidentCreate) -> dict[str, Any]:
-    return create_incident(
-        title=payload.title,
-        alert_uids=payload.alert_uids,
-        indicators=payload.indicators,
-        summary=payload.summary,
-    )
+    try:
+        return create_incident(
+            title=payload.title,
+            alert_uids=payload.alert_uids,
+            indicators=payload.indicators,
+            summary=payload.summary,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("")
@@ -42,9 +45,9 @@ def get_incidents(
 
 @router.get("/{incident_uid}")
 def get_incident(incident_uid: str) -> dict[str, Any]:
-    for incident in list_incidents(limit=1000):
-        if incident["incident_uid"] == incident_uid:
-            return incident
+    incident = find_incident(incident_uid)
+    if incident:
+        return incident
     raise HTTPException(status_code=404, detail="Incident not found")
 
 

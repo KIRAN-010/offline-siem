@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .alert_store import list_alerts
@@ -11,7 +11,7 @@ from .incident_store import create_incident
 
 def _alert_time(alert: dict[str, Any]) -> datetime:
     value = datetime.fromisoformat(str(alert["timestamp"]).replace("Z", "+00:00"))
-    return value
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
 def correlation_keys(alert: dict[str, Any]) -> set[str]:

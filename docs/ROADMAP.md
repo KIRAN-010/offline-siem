@@ -1,60 +1,35 @@
-# SentinelX SOC Roadmap
+# SentinelX implementation status
 
-## Milestone 1 — Foundation
-- [x] Architecture documented
-- [ ] Backend service skeleton
-- [ ] Database schema
-- [ ] Common event schema
-- [ ] Health/readiness endpoints
-- [ ] Frontend shell
-- [ ] Automated tests
+## Available and tested
 
-## Milestone 2 — SIEM Core
-- [ ] Event ingestion API
-- [ ] JSON/CSV ingestion
-- [ ] Linux log parser
-- [ ] Windows/Sysmon parser
-- [ ] Event normalization
-- [ ] Event search/filtering
-- [ ] Dashboard metrics
+- [x] FastAPI service and health/readiness endpoints
+- [x] SQLite schema, canonical UTC events and deduplication
+- [x] JSON/JSONL/CSV/text file imports through the console and API
+- [x] Linux/syslog/text parsing and structured event field mapping
+- [x] Event search, threat hunting and saved searches
+- [x] Local detection engine, YAML rule loading/matching and fixtures
+- [x] Alert lifecycle, correlation, incident management and risk scoring
+- [x] Basic MITRE ATT&CK technique mappings
+- [x] Analyst notes and explicit event evidence links
+- [x] Investigation timelines and JSON/HTML/text case reports
+- [x] Offline IP/CIDR intelligence matching
+- [x] React analyst controls for ingestion, triage and investigation
+- [x] Streamlit interface
+- [x] Reproducible frontend dependency lockfile
+- [x] Python and frontend interaction tests
+- [x] Docker configuration and GitHub Actions validation
+- [x] Synthetic brute-force scenario and deployment instructions
 
-## Milestone 3 — Detection Engineering
-- [ ] Detection rule schema
-- [ ] Rule loader
-- [ ] Detection matcher
-- [ ] Sigma-compatible rules
-- [ ] Alert lifecycle
-- [ ] MITRE ATT&CK mappings
-- [ ] Detection test fixtures
+## Optional future expansion
 
-## Milestone 4 — SOC Operations
-- [ ] Alert triage
-- [ ] Correlation engine
-- [ ] Risk scoring
-- [ ] Incident/case management
-- [ ] Analyst notes
-- [ ] Evidence management
-- [ ] Investigation timeline
+These are beyond the supported local workflow, rather than prerequisites for running it:
 
-## Milestone 5 — Threat Intelligence
-- [ ] Local IOC database
-- [ ] IP/domain/hash/URL entities
-- [ ] IOC-to-event relationships
-- [ ] Enrichment adapter interface
-- [ ] Offline threat-intel import
+- Full Sigma specification and specialized Windows EVTX parsing
+- Large-scale continuous ingestion across API batches
+- Domain/hash/URL intelligence providers and enrichment adapters
+- Advanced hunting query language and complete ATT&CK coverage matrix
+- Authentication, roles and multi-user audit attribution
+- Additional real-world telemetry datasets and performance benchmarks
+- Packaged offline dependency bundles and signed release artifacts
 
-## Milestone 6 — Hunting & Reporting
-- [ ] Threat-hunting query language
-- [ ] Saved searches
-- [ ] ATT&CK coverage view
-- [ ] Incident report generation
-- [ ] SOC metrics
-
-## Milestone 7 — Release Quality
-- [ ] Docker deployment
-- [ ] CI pipeline
-- [ ] Security/static checks
-- [ ] Demo attack datasets
-- [ ] End-to-end tests
-- [ ] Deployment documentation
-- [ ] v1.0 release
+Docker smoke testing runs in GitHub Actions; local verification requires Docker to be installed. JSON documents use document parsing; JSONL/text and CSV support streaming ingestion. API imports are bounded to 2 MiB and 10,000 events.

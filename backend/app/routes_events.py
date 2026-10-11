@@ -64,10 +64,10 @@ def list_events(
             params.append(value)
     if start:
         clauses.append("timestamp >= ?")
-        params.append(start.isoformat())
+        params.append(SecurityEvent.utc_timestamp(start).isoformat())
     if end:
         clauses.append("timestamp <= ?")
-        params.append(end.isoformat())
+        params.append(SecurityEvent.utc_timestamp(end).isoformat())
 
     query = "SELECT * FROM events"
     if clauses:

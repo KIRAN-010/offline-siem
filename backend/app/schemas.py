@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SecurityEvent(BaseModel):
@@ -18,3 +18,11 @@ class SecurityEvent(BaseModel):
     command: str | None = Field(default=None, max_length=2000)
     severity: str = Field(default="info", max_length=20)
     raw_data: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator('timestamp')
+    @classmethod
+    def utc_timestamp(cls, value: datetime) -> datetime:
+        # Treat timezone-less local imports as UTC consistently.
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)

@@ -5,16 +5,15 @@ from fastapi import APIRouter, HTTPException
 
 from .attack_map import map_incident_to_attack
 from .db import get_connection
-from .incident_store import list_incidents
+from .incident_store import get_incident
 
 router = APIRouter(prefix="/api/v1/investigation", tags=["investigation"])
 
 
 def _get_incident(incident_uid: str) -> dict[str, Any]:
-    incidents = list_incidents(limit=1000)
-    for incident in incidents:
-        if incident["incident_uid"] == incident_uid:
-            return incident
+    incident = get_incident(incident_uid)
+    if incident:
+        return incident
     raise HTTPException(status_code=404, detail="Incident not found")
 
 

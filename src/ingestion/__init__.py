@@ -137,6 +137,25 @@ class LogIngestor:
                 logger.warning(f"No parser found for: {file_path}")
                 return
 
+        # CSV needs its header and quoted multiline rows preserved. JSON arrays
+        # need document parsing; line streaming applies to JSONL and text logs.
+        if parser.name == 'csv':
+            import csv
+            try:
+                with file_path.open('r', encoding='utf-8', newline='') as handle:
+                    for row in csv.DictReader(handle):
+                        if row and any(row.values()):
+                            yield parser._parse_row(row, parser._row_to_raw(row))
+            except (OSError, UnicodeError, csv.Error) as exc:
+                logger.error(f"Error streaming CSV {file_path}: {exc}")
+            return
+        if parser.name == 'json':
+            with file_path.open('r', encoding='utf-8') as handle:
+                prefix = handle.read(1024).lstrip()
+            if prefix.startswith('[') or (prefix.startswith('{') and '\n' in prefix and prefix.splitlines()[0].strip() == '{'):
+                yield from parser.parse_file(file_path)
+                return
+
         # Stream file in chunks
         try:
             with open(file_path, 'rb') as f:
@@ -220,58 +239,22 @@ class LogIngestor:
             return iter([]), last_position
 
         try:
-            with open(file_path, 'rb') as f:
-                f.seek(last_position)
-                buffer = b""
-                new_position = last_position
-
-                while True:
-                    chunk = f.read(8192)
-                    if not chunk:
-                        break
-
-                    buffer += chunk
-                    new_position = f.tell()
-
-                    # Process complete lines
-                    lines = buffer.split(b'\n')
-                    buffer = lines.pop()
-
-                    for line_bytes in lines:
-                        try:
-                            line = line_bytes.decode('utf-8').rstrip('\r\n')
-                            if line:
-                                if hasattr(parser, 'parse_line'):
-                                    entry = parser.parse_line(line)
-                                    if entry:
-                                        yield entry
-                                else:
-                                    entries = list(parser.parse(line))
-                                    for entry in entries:
-                                        yield entry
-                        except UnicodeDecodeError:
-                            continue
-
-                # Process remaining buffer
-                if buffer:
-                    try:
-                        line = buffer.decode('utf-8').rstrip('\r\n')
-                        if line:
-                            if hasattr(parser, 'parse_line'):
-                                entry = parser.parse_line(line)
-                                if entry:
-                                    yield entry
-                            else:
-                                entries = list(parser.parse(line))
-                                for entry in entries:
-                                    yield entry
-                    except UnicodeDecodeError:
-                        pass
-
-        except Exception as e:
-            logger.error(f"Error in incremental ingestion {file_path}: {e}")
-
-        return iter([]), new_position
+            # Rotation/truncation resets the offset. Partial lines are retained
+            # for the next poll rather than consumed twice or discarded.
+            if last_position < 0 or last_position > file_path.stat().st_size:
+                last_position = 0
+            with file_path.open('rb') as handle:
+                handle.seek(last_position)
+                content = handle.read()
+            complete = content.rfind(b'\n') + 1
+            if complete == 0:
+                return iter([]), last_position
+            text = content[:complete].decode('utf-8', errors='replace')
+            entries = list(parser.parse(text))
+            return iter(entries), last_position + complete
+        except (OSError, ValueError) as exc:
+            logger.error(f"Error in incremental ingestion {file_path}: {exc}")
+            return iter([]), last_position
 
     def ingest_directory(
         self,

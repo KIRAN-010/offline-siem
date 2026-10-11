@@ -221,3 +221,34 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md). The next major feature set is advanced
 ## License
 
 MIT License
+
+## Complete local analyst workflow
+
+1. Start the backend and frontend with the commands above.
+2. In **Ingestion**, upload `scenarios/ssh_bruteforce/events.jsonl` to create sample events and detections.
+3. Run correlation before triaging alerts; correlation considers alerts in the `new` state.
+4. Change alert status in **Alert triage**.
+5. Click **Investigate** on a case to change its status, add notes, attach an event UID as evidence and download an HTML report.
+6. Search in **Threat hunting**; matching results expose event UIDs. Name and save useful searches for reuse after a restart.
+
+Additional endpoints:
+
+- `POST /api/v1/imports` with JSON `{ "filename": "logs.jsonl", "content": "..." }`
+- `GET /api/v1/hunting/search`
+- `GET/POST /api/v1/hunting/saved`
+- `GET/POST /api/v1/incidents/{uid}/notes`
+- `GET/POST /api/v1/incidents/{uid}/evidence`
+- `GET /api/v1/incidents/{uid}/report?format=json|html|txt`
+
+File imports support JSON, JSONL, CSV, TXT and LOG, with limits of 2 MiB of text and 10,000 events. Event timestamps normalize to UTC. Structured JSON fields such as `Computer`, `User`, `SourceIp`, `EventID`, `Image` and `CommandLine` are mapped where present; binary Windows EVTX files are not supported.
+
+Frontend validation uses the committed lockfile:
+
+```bash
+cd frontend
+npm ci
+npm test
+npm run build
+```
+
+This is a local, single-analyst tool. The API has no authentication; Docker ports bind to loopback by default. Detection operates on each ingestion batch, so submit a related scenario together. The roadmap distinguishes supported functionality from optional future expansion.
